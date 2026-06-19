@@ -46,6 +46,45 @@ a {
   padding: 32px 0 56px;
 }
 
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 16px;
+}
+
+.app-header strong {
+  font-size: 1.25rem;
+}
+
+.app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.app-nav button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--ink);
+  background: var(--panel);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.app-nav button[aria-current="page"] {
+  border-color: var(--accent);
+  color: white;
+  background: var(--accent);
+}
+
 .landing {
   min-height: calc(100vh - 64px);
   display: grid;
@@ -224,6 +263,36 @@ textarea {
   margin: 4px 0;
 }
 
+.success-message {
+  margin-top: 18px;
+  border: 1px solid rgba(39, 108, 90, 0.35);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: var(--accent-strong);
+  background: rgba(39, 108, 90, 0.1);
+  font-weight: 800;
+}
+
+.profile-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.profile-summary div {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--panel);
+}
+
+.profile-summary span {
+  color: var(--muted);
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -374,8 +443,13 @@ textarea {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .profile-summary {
+    grid-template-columns: 1fr;
+  }
+
   .section-heading,
-  .dashboard-header {
+  .dashboard-header,
+  .app-header {
     align-items: start;
     flex-direction: column;
   }

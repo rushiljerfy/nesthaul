@@ -6,6 +6,10 @@ import type { ApartmentType, OnboardingProfile, Preference } from "@/lib/types";
 
 interface OnboardingFormProps {
   onComplete: (profile: OnboardingProfile) => void;
+  initialProfile?: OnboardingProfile;
+  submitLabel?: string;
+  headingEyebrow?: string;
+  headingTitle?: string;
 }
 
 interface FormState {
@@ -28,8 +32,14 @@ const initialState: FormState = {
   ownedItems: ""
 };
 
-export function OnboardingForm({ onComplete }: OnboardingFormProps) {
-  const [form, setForm] = useState(initialState);
+export function OnboardingForm({
+  onComplete,
+  initialProfile,
+  submitLabel = "Create my plan",
+  headingEyebrow = "Move-in plan",
+  headingTitle = "Tell NestHaul what you are working with."
+}: OnboardingFormProps) {
+  const [form, setForm] = useState<FormState>(() => profileToFormState(initialProfile));
   const [errors, setErrors] = useState<string[]>([]);
 
   function updateField(name: keyof FormState, value: string) {
@@ -62,8 +72,8 @@ export function OnboardingForm({ onComplete }: OnboardingFormProps) {
   return (
     <section className="section-shell" id="onboarding">
       <div className="section-heading">
-        <p className="eyebrow">Move-in plan</p>
-        <h2>Tell NestHaul what you are working with.</h2>
+        <p className="eyebrow">{headingEyebrow}</p>
+        <h2>{headingTitle}</h2>
       </div>
 
       {errors.length > 0 ? (
@@ -147,12 +157,28 @@ export function OnboardingForm({ onComplete }: OnboardingFormProps) {
         </label>
 
         <button className="primary-button form-submit" type="submit">
-          Create my plan
+          {submitLabel}
           <ArrowRight aria-hidden="true" size={18} />
         </button>
       </form>
     </section>
   );
+}
+
+function profileToFormState(profile?: OnboardingProfile): FormState {
+  if (!profile) {
+    return initialState;
+  }
+
+  return {
+    location: profile.location,
+    apartmentType: profile.apartmentType,
+    moveInDate: profile.moveInDate,
+    totalBudget: String(profile.totalBudget),
+    preference: profile.preference,
+    stylePreference: profile.stylePreference,
+    ownedItems: profile.ownedItems.join(", ")
+  };
 }
 
 function validate(form: FormState) {

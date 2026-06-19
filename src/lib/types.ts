@@ -17,6 +17,8 @@ export type ChecklistStatus = "missing" | "saved" | "bought" | "skipped";
 
 export type ListingRecommendation = "Buy" | "Wait" | "Skip";
 
+export type AppPage = "Dashboard" | "Explore" | "Profile";
+
 export interface OnboardingProfile {
   location: string;
   apartmentType: ApartmentType;
@@ -49,9 +51,30 @@ export interface Listing {
   logistics: string;
   distance?: number;
   notes?: string;
+  savedFrom?: "manual" | "explore";
 }
 
 export interface ListingAssessment {
   recommendation: ListingRecommendation;
   explanation: string;
+}
+
+export interface ExploreItem {
+  id: string;
+  title: string;
+  price: number;
+  source: string;
+  url: string;
+  checklistItemId: string;
+  category: ChecklistCategory;
+  condition: Listing["condition"];
+  logistics: string;
+  notes: string;
+}
+
+export interface SavedPlan {
+  activePage: AppPage;
+  profile: OnboardingProfile;
+  checklist: ChecklistItem[];
+  listings: Listing[];
 }
