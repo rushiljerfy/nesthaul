@@ -13,12 +13,12 @@ import { OnboardingForm } from "./OnboardingForm";
 import { ProfilePage } from "./ProfilePage";
 
 export function NestHaulApp() {
-  const [stage, setStage] = useState<"landing" | "onboarding" | "app">("landing");
-  const [activePage, setActivePage] = useState<AppPage>("Dashboard");
-  const [profile, setProfile] = useState<OnboardingProfile | null>(null);
-  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
-  const [listings, setListings] = useState<Listing[]>([]);
-  const [hasLoadedSavedPlan, setHasLoadedSavedPlan] = useState(false);
+  const [initialPlan] = useState(() => loadSavedPlan());
+  const [stage, setStage] = useState<"landing" | "onboarding" | "app">(() => (initialPlan ? "app" : "landing"));
+  const [activePage, setActivePage] = useState<AppPage>(() => initialPlan?.activePage ?? "Dashboard");
+  const [profile, setProfile] = useState<OnboardingProfile | null>(() => initialPlan?.profile ?? null);
+  const [checklist, setChecklist] = useState<ChecklistItem[]>(() => initialPlan?.checklist ?? []);
+  const [listings, setListings] = useState<Listing[]>(() => initialPlan?.listings ?? []);
 
   const summary = useMemo(
     () => calculateDashboardSummary(profile?.totalBudget ?? 0, checklist, listings),
@@ -26,26 +26,12 @@ export function NestHaulApp() {
   );
 
   useEffect(() => {
-    const savedPlan = loadSavedPlan();
-
-    if (savedPlan) {
-      setProfile(savedPlan.profile);
-      setChecklist(savedPlan.checklist);
-      setListings(savedPlan.listings);
-      setActivePage(savedPlan.activePage);
-      setStage("app");
-    }
-
-    setHasLoadedSavedPlan(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hasLoadedSavedPlan || !profile) {
+    if (!profile) {
       return;
     }
 
     savePlan({ activePage, profile, checklist, listings });
-  }, [activePage, checklist, hasLoadedSavedPlan, listings, profile]);
+  }, [activePage, checklist, listings, profile]);
 
   function handleOnboardingComplete(nextProfile: OnboardingProfile) {
     setProfile(nextProfile);
