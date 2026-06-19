@@ -7,6 +7,7 @@ import { loadSavedPlan, savePlan } from "@/lib/storage";
 import type { AppPage, ChecklistItem, ChecklistStatus, Listing, OnboardingProfile } from "@/lib/types";
 import { AppNav } from "./AppNav";
 import { DashboardPage } from "./DashboardPage";
+import { ExplorePage } from "./ExplorePage";
 import { LandingPage } from "./LandingPage";
 import { OnboardingForm } from "./OnboardingForm";
 import { ProfilePage } from "./ProfilePage";
@@ -62,6 +63,32 @@ export function NestHaulApp() {
     updateChecklistStatus(listing.checklistItemId, "saved");
   }
 
+  function saveExploreItem(item: Parameters<React.ComponentProps<typeof ExplorePage>["onSaveItem"]>[0]) {
+    setListings((current) => {
+      if (current.some((listing) => listing.id === item.id)) {
+        return current;
+      }
+
+      return [
+        ...current,
+        {
+          id: item.id,
+          title: item.title,
+          price: item.price,
+          source: item.source,
+          url: item.url,
+          checklistItemId: item.checklistItemId,
+          category: item.category,
+          condition: item.condition,
+          logistics: item.logistics,
+          notes: item.notes,
+          savedFrom: "explore"
+        }
+      ];
+    });
+    updateChecklistStatus(item.checklistItemId, "saved");
+  }
+
   function saveProfile(nextProfile: OnboardingProfile) {
     setProfile(nextProfile);
     setChecklist((current) =>
@@ -91,6 +118,7 @@ export function NestHaulApp() {
             />
           ) : null}
           {activePage === "Profile" ? <ProfilePage profile={profile} onSaveProfile={saveProfile} /> : null}
+          {activePage === "Explore" ? <ExplorePage savedListings={listings} onSaveItem={saveExploreItem} /> : null}
         </>
       ) : null}
     </main>

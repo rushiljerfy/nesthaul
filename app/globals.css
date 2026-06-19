@@ -208,6 +208,13 @@ a {
   color: var(--muted);
 }
 
+.section-note {
+  max-width: 360px;
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
 .onboarding-grid,
 .listing-form {
   display: grid;
@@ -376,6 +383,11 @@ textarea {
   margin: 6px 0;
 }
 
+.saved-source {
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+
 .listing-row a {
   display: inline-flex;
   align-items: center;
@@ -428,6 +440,81 @@ textarea {
 
 .source-strip a {
   font-weight: 800;
+}
+
+.explore-stack {
+  display: grid;
+  gap: 18px;
+}
+
+.explore-category {
+  display: grid;
+  gap: 12px;
+}
+
+.explore-category h3 {
+  margin: 0;
+}
+
+.explore-carousel {
+  display: grid;
+  grid-auto-columns: minmax(260px, 320px);
+  grid-auto-flow: column;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scroll-snap-type: x mandatory;
+}
+
+.explore-card {
+  display: flex;
+  min-height: 260px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 16px;
+  background: var(--panel);
+  scroll-snap-align: start;
+}
+
+.explore-card h4 {
+  margin: 8px 0;
+  font-size: 1.1rem;
+}
+
+.explore-card span,
+.explore-card p,
+.explore-card small {
+  color: var(--muted);
+}
+
+.explore-card strong {
+  display: block;
+  font-size: 1.35rem;
+}
+
+.explore-card button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--accent-strong);
+  background: var(--mint);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.explore-card button:disabled {
+  border-color: var(--line);
+  color: var(--muted);
+  background: #f5f7f4;
+  cursor: default;
 }
 
 @media (max-width: 860px) {

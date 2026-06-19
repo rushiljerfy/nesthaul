@@ -161,6 +161,7 @@ export function SavedListings({
                   <p>
                     {listing.source} · {listing.condition} · {listing.logistics}
                   </p>
+                  {listing.savedFrom === "explore" ? <p className="saved-source">Saved from Explore</p> : null}
                   {listing.notes ? <p>{listing.notes}</p> : null}
                   <a href={listing.url} target="_blank" rel="noreferrer">
                     <LinkIcon aria-hidden="true" size={14} />
