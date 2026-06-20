@@ -9,6 +9,9 @@ const placeholderValues = new Set([
   "NEXT_PUBLIC_SUPABASE_ANON_KEY"
 ]);
 
+let cachedClient: SupabaseClient | null = null;
+let cachedConfigKey: string | null = null;
+
 function getSupabaseConfig() {
   return {
     url: process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "",
@@ -28,6 +31,14 @@ export function createBrowserSupabaseClient(): SupabaseClient | null {
   }
 
   const { url, anonKey } = getSupabaseConfig();
+  const configKey = `${url}:${anonKey}`;
 
-  return createClient(url, anonKey);
+  if (cachedClient && cachedConfigKey === configKey) {
+    return cachedClient;
+  }
+
+  cachedClient = createClient(url, anonKey);
+  cachedConfigKey = configKey;
+
+  return cachedClient;
 }
