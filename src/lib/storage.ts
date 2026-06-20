@@ -2,12 +2,20 @@ import type { SavedPlan } from "./types";
 
 const storageKey = "nesthaul-plan";
 
-export function loadSavedPlan(): SavedPlan | null {
+function storageKeyForUser(userEmail: string) {
+  return `${storageKey}:${userEmail}`;
+}
+
+export function loadSavedPlan(userEmail?: string | null): SavedPlan | null {
   if (typeof window === "undefined") {
     return null;
   }
 
-  const rawPlan = window.localStorage.getItem(storageKey);
+  if (!userEmail) {
+    return null;
+  }
+
+  const rawPlan = window.localStorage.getItem(storageKeyForUser(userEmail));
 
   if (!rawPlan) {
     return null;
@@ -20,16 +28,25 @@ export function loadSavedPlan(): SavedPlan | null {
   }
 }
 
-export function savePlan(plan: SavedPlan) {
+export function savePlan(plan: SavedPlan, userEmail?: string | null) {
   if (typeof window === "undefined") {
     return;
   }
 
-  window.localStorage.setItem(storageKey, JSON.stringify(plan));
+  if (!userEmail) {
+    return;
+  }
+
+  window.localStorage.setItem(storageKeyForUser(userEmail), JSON.stringify(plan));
 }
 
-export function clearSavedPlan() {
+export function clearSavedPlan(userEmail?: string | null) {
   if (typeof window === "undefined") {
+    return;
+  }
+
+  if (userEmail) {
+    window.localStorage.removeItem(storageKeyForUser(userEmail));
     return;
   }
 

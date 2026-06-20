@@ -46,17 +46,24 @@ describe("NestHaul localStorage persistence", () => {
     window.localStorage.clear();
   });
 
-  it("saves and loads the complete working plan", () => {
+  it("saves and loads the complete working plan for a logged-in user", () => {
+    savePlan(savedPlan, "rushil@example.com");
+
+    expect(loadSavedPlan("rushil@example.com")).toEqual(savedPlan);
+  });
+
+  it("does not save or load a plan without a logged-in user", () => {
     savePlan(savedPlan);
 
-    expect(loadSavedPlan()).toEqual(savedPlan);
+    expect(loadSavedPlan()).toBeNull();
+    expect(window.localStorage.getItem("nesthaul-plan")).toBeNull();
   });
 
   it("returns null for missing or invalid saved data", () => {
-    expect(loadSavedPlan()).toBeNull();
+    expect(loadSavedPlan("rushil@example.com")).toBeNull();
 
-    window.localStorage.setItem("nesthaul-plan", "{not-json");
+    window.localStorage.setItem("nesthaul-plan:rushil@example.com", "{not-json");
 
-    expect(loadSavedPlan()).toBeNull();
+    expect(loadSavedPlan("rushil@example.com")).toBeNull();
   });
 });
