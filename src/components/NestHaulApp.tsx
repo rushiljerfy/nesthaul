@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { calculateDashboardSummary } from "@/lib/budget";
 import { createMoveInChecklist } from "@/lib/checklist";
-import { loadSavedPlan, savePlan } from "@/lib/storage";
+import { clearSavedPlan, loadSavedPlan, savePlan } from "@/lib/storage";
+import { useAuth } from "@/lib/useAuth";
 import type { AppPage, ChecklistItem, ChecklistStatus, Listing, OnboardingProfile } from "@/lib/types";
 import { AppNav } from "./AppNav";
 import { DashboardPage } from "./DashboardPage";
@@ -12,11 +13,22 @@ import { LandingPage } from "./LandingPage";
 import { OnboardingForm } from "./OnboardingForm";
 import { ProfilePage } from "./ProfilePage";
 
+const defaultProfile: OnboardingProfile = {
+  location: "",
+  apartmentType: "studio",
+  moveInDate: "",
+  totalBudget: 0,
+  preference: "mix",
+  stylePreference: "",
+  ownedItems: []
+};
+
 export function NestHaulApp() {
-  const [stage, setStage] = useState<"landing" | "onboarding" | "app">("landing");
-  const [activePage, setActivePage] = useState<AppPage>("Dashboard");
-  const [profile, setProfile] = useState<OnboardingProfile | null>(null);
-  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const { isLoading: isAuthLoading, logout, userEmail } = useAuth();
+  const [stage, setStage] = useState<"landing" | "onboarding" | "app">("app");
+  const [activePage, setActivePage] = useState<AppPage>("Explore");
+  const [profile, setProfile] = useState<OnboardingProfile | null>(defaultProfile);
+  const [checklist, setChecklist] = useState<ChecklistItem[]>(() => createMoveInChecklist());
   const [listings, setListings] = useState<Listing[]>([]);
   const [hasLoadedSavedPlan, setHasLoadedSavedPlan] = useState(false);
 
@@ -27,27 +39,46 @@ export function NestHaulApp() {
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    const savedPlan = loadSavedPlan();
+    if (isAuthLoading) {
+      return;
+    }
+
+    if (!userEmail) {
+      clearSavedPlan();
+      setProfile(defaultProfile);
+      setChecklist(createMoveInChecklist());
+      setListings([]);
+      setActivePage("Explore");
+      setStage("app");
+      setHasLoadedSavedPlan(true);
+      return;
+    }
+
+    const savedPlan = loadSavedPlan(userEmail);
 
     if (savedPlan) {
       setProfile(savedPlan.profile);
       setChecklist(savedPlan.checklist);
       setListings(savedPlan.listings);
-      setActivePage(savedPlan.activePage);
-      setStage("app");
+    } else {
+      setProfile(defaultProfile);
+      setChecklist(createMoveInChecklist());
+      setListings([]);
     }
 
+    setActivePage("Explore");
+    setStage("app");
     setHasLoadedSavedPlan(true);
-  }, []);
+  }, [isAuthLoading, userEmail]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
-    if (!hasLoadedSavedPlan || !profile) {
+    if (!hasLoadedSavedPlan || !profile || !userEmail) {
       return;
     }
 
-    savePlan({ activePage, profile, checklist, listings });
-  }, [activePage, checklist, hasLoadedSavedPlan, listings, profile]);
+    savePlan({ activePage, profile, checklist, listings }, userEmail);
+  }, [activePage, checklist, hasLoadedSavedPlan, listings, profile, userEmail]);
 
   function handleOnboardingComplete(nextProfile: OnboardingProfile) {
     setProfile(nextProfile);
@@ -125,7 +156,7 @@ export function NestHaulApp() {
       {stage === "onboarding" ? <OnboardingForm onComplete={handleOnboardingComplete} /> : null}
       {stage === "app" && profile ? (
         <>
-          <AppNav activePage={activePage} onNavigate={setActivePage} />
+          <AppNav activePage={activePage} onNavigate={setActivePage} onLogout={logout} userEmail={userEmail} />
           {activePage === "Dashboard" ? (
             <DashboardPage
               profile={profile}
@@ -135,9 +166,12 @@ export function NestHaulApp() {
               onAddListing={addListing}
               onRemoveListing={removeListing}
               onUpdateStatus={updateChecklistStatus}
+              showAuthCta={!userEmail}
             />
           ) : null}
-          {activePage === "Profile" ? <ProfilePage profile={profile} onSaveProfile={saveProfile} /> : null}
+          {activePage === "Profile" ? (
+            <ProfilePage profile={profile} onSaveProfile={saveProfile} showAuthCta={!userEmail} />
+          ) : null}
           {activePage === "Explore" ? <ExplorePage savedListings={listings} onSaveItem={saveExploreItem} /> : null}
         </>
       ) : null}

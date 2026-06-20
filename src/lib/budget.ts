@@ -15,9 +15,7 @@ export function calculateDashboardSummary(
   checklist: ChecklistItem[],
   listings: Listing[]
 ): DashboardSummary {
-  const plannedSpend = checklist
-    .filter((item) => item.status === "missing")
-    .reduce((sum, item) => sum + item.suggestedBudget, 0);
+  const plannedSpend = listings.reduce((sum, listing) => sum + listing.price, 0);
   const missingUrgentItems = checklist.filter((item) => item.status === "missing" && item.priority === "urgent");
 
   return {

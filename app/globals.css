@@ -59,6 +59,34 @@ a {
   font-size: 1.25rem;
 }
 
+.account-actions {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-actions a,
+.account-actions button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--accent-strong);
+  background: var(--panel);
+  cursor: pointer;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.account-actions span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
 .app-nav {
   display: flex;
   flex-wrap: wrap;
@@ -278,6 +306,74 @@ textarea {
   color: var(--accent-strong);
   background: rgba(39, 108, 90, 0.1);
   font-weight: 800;
+}
+
+.auth-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+  border: 1px solid rgba(39, 108, 90, 0.25);
+  border-radius: 8px;
+  padding: 14px 16px;
+  background: rgba(223, 238, 231, 0.75);
+}
+
+.auth-cta p {
+  margin: 0;
+  color: var(--accent-strong);
+  font-weight: 800;
+}
+
+.auth-cta a {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: white;
+  background: var(--accent);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.auth-page {
+  max-width: 520px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 18px;
+  background: var(--panel);
+}
+
+.auth-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 4px;
+  background: #f5f7f4;
+}
+
+.auth-mode-switch button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.auth-mode-switch button[aria-pressed="true"] {
+  color: white;
+  background: var(--accent);
 }
 
 .profile-summary {

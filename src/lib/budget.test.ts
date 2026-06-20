@@ -51,11 +51,18 @@ describe("calculateDashboardSummary", () => {
     const summary = calculateDashboardSummary(700, checklist, listings);
 
     expect(summary.totalBudget).toBe(700);
-    expect(summary.plannedSpend).toBe(300);
-    expect(summary.remainingBudget).toBe(400);
+    expect(summary.plannedSpend).toBe(180);
+    expect(summary.remainingBudget).toBe(520);
     expect(summary.essentialsCompleted).toBe(1);
     expect(summary.missingUrgentItems.map((item) => item.name)).toEqual(["Mattress"]);
     expect(summary.savedListings).toBe(1);
     expect(summary.bestNextItem?.name).toBe("Mattress");
+  });
+
+  it("initializes planned spend to zero when no listings are saved", () => {
+    const summary = calculateDashboardSummary(700, checklist, []);
+
+    expect(summary.plannedSpend).toBe(0);
+    expect(summary.remainingBudget).toBe(700);
   });
 });

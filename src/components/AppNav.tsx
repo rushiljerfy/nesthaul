@@ -6,6 +6,8 @@ import type { AppPage } from "@/lib/types";
 interface AppNavProps {
   activePage: AppPage;
   onNavigate: (page: AppPage) => void;
+  onLogout?: () => void;
+  userEmail?: string | null;
 }
 
 const navItems: { page: AppPage; icon: React.ReactNode }[] = [
@@ -14,7 +16,7 @@ const navItems: { page: AppPage; icon: React.ReactNode }[] = [
   { page: "Profile", icon: <UserRound aria-hidden="true" size={18} /> }
 ];
 
-export function AppNav({ activePage, onNavigate }: AppNavProps) {
+export function AppNav({ activePage, onNavigate, onLogout, userEmail }: AppNavProps) {
   return (
     <header className="app-header">
       <div>
@@ -34,6 +36,21 @@ export function AppNav({ activePage, onNavigate }: AppNavProps) {
           </button>
         ))}
       </nav>
+      <div className="account-actions" aria-label="Account">
+        {userEmail ? (
+          <>
+            <span>{userEmail}</span>
+            <button type="button" onClick={onLogout}>
+              Log out
+            </button>
+          </>
+        ) : (
+          <>
+            <a href="/login">Log in</a>
+            <a href="/signup">Sign up</a>
+          </>
+        )}
+      </div>
     </header>
   );
 }

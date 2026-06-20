@@ -2,18 +2,21 @@
 
 import { useState } from "react";
 import type { OnboardingProfile } from "@/lib/types";
+import { AuthCta } from "./AuthCta";
 import { OnboardingForm } from "./OnboardingForm";
 
 interface ProfilePageProps {
   profile: OnboardingProfile;
   onSaveProfile: (profile: OnboardingProfile) => void;
+  showAuthCta?: boolean;
 }
 
-export function ProfilePage({ profile, onSaveProfile }: ProfilePageProps) {
+export function ProfilePage({ profile, onSaveProfile, showAuthCta = false }: ProfilePageProps) {
   const [saved, setSaved] = useState(false);
 
   return (
     <section>
+      {showAuthCta ? <AuthCta /> : null}
       <div className="profile-summary">
         <div>
           <span>Location</span>
