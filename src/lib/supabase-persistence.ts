@@ -81,7 +81,7 @@ export async function loadPlanFromSupabase(client: DatabaseClient, userId: strin
 
 export async function savePlanToSupabase(client: DatabaseClient, userId: string, plan: SavedPlan): Promise<void> {
   const planRow = movePlanToRow(userId, plan);
-  const planResult = await client.from("move_plans").upsert(planRow, { onConflict: "user_id" });
+  const planResult = await client.from("move_plans").upsert(planRow as never, { onConflict: "user_id" });
 
   throwIfSupabaseError(planResult.error);
 
@@ -120,7 +120,7 @@ async function replaceRows<T>(client: DatabaseClient, table: string, userId: str
     return;
   }
 
-  const insertResult = await client.from(table).insert(rows);
+  const insertResult = await client.from(table).insert(rows as never);
 
   throwIfSupabaseError(insertResult.error);
 }

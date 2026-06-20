@@ -308,6 +308,16 @@ textarea {
   font-weight: 800;
 }
 
+.persistence-message {
+  margin-top: 18px;
+  border: 1px solid rgba(39, 108, 90, 0.25);
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: var(--accent-strong);
+  background: rgba(223, 238, 231, 0.62);
+  font-weight: 800;
+}
+
 .auth-cta {
   display: flex;
   align-items: center;

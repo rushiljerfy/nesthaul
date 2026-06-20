@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { loadSavedPlan, savePlan } from "./storage";
+import { clearSessionPlan, loadSavedPlan, loadSessionPlan, savePlan, saveSessionPlan } from "./storage";
 import type { SavedPlan } from "./types";
 
 const profile = {
@@ -44,6 +44,7 @@ const savedPlan: SavedPlan = {
 describe("NestHaul localStorage persistence", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    window.sessionStorage.clear();
   });
 
   it("saves and loads the complete working plan for a logged-in user", () => {
@@ -57,6 +58,17 @@ describe("NestHaul localStorage persistence", () => {
 
     expect(loadSavedPlan()).toBeNull();
     expect(window.localStorage.getItem("nesthaul-plan")).toBeNull();
+  });
+
+  it("keeps logged-out fallback data in session storage only", () => {
+    saveSessionPlan(savedPlan);
+
+    expect(loadSessionPlan()).toEqual(savedPlan);
+    expect(window.localStorage.getItem("nesthaul-plan")).toBeNull();
+
+    clearSessionPlan();
+
+    expect(loadSessionPlan()).toBeNull();
   });
 
   it("returns null for missing or invalid saved data", () => {

@@ -10,6 +10,7 @@ function emailFromUser(user: User | null | undefined) {
 
 export function useAuth() {
   const client = useMemo(() => createBrowserSupabaseClient(), []);
+  const [userId, setUserId] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(client));
 
@@ -26,11 +27,13 @@ export function useAuth() {
       }
 
       setUserEmail(emailFromUser(data.session?.user));
+      setUserId(data.session?.user.id ?? null);
       setIsLoading(false);
     });
 
     const { data } = client.auth.onAuthStateChange((_event, session) => {
       setUserEmail(emailFromUser(session?.user));
+      setUserId(session?.user.id ?? null);
       setIsLoading(false);
     });
 
@@ -47,6 +50,7 @@ export function useAuth() {
     }
 
     await client.auth.signOut();
+    setUserId(null);
     setUserEmail(null);
   }
 
@@ -54,6 +58,7 @@ export function useAuth() {
     isConfigured: isSupabaseConfigured(),
     isLoading,
     logout,
+    userId,
     userEmail
   };
 }

@@ -1,5 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createBrowserSupabaseClient } from "@/lib/supabase";
+import { loadPlanFromSupabase, migrateLocalPlanToSupabase, savePlanToSupabase } from "@/lib/supabase-persistence";
 import { useAuth } from "@/lib/useAuth";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NestHaulApp } from "./NestHaulApp";
@@ -8,15 +10,76 @@ vi.mock("@/lib/useAuth", () => ({
   useAuth: vi.fn()
 }));
 
+vi.mock("@/lib/supabase", () => ({
+  createBrowserSupabaseClient: vi.fn()
+}));
+
+vi.mock("@/lib/supabase-persistence", () => ({
+  loadPlanFromSupabase: vi.fn(),
+  migrateLocalPlanToSupabase: vi.fn(),
+  savePlanToSupabase: vi.fn()
+}));
+
 const mockUseAuth = vi.mocked(useAuth);
+const mockCreateBrowserSupabaseClient = vi.mocked(createBrowserSupabaseClient);
+const mockLoadPlanFromSupabase = vi.mocked(loadPlanFromSupabase);
+const mockMigrateLocalPlanToSupabase = vi.mocked(migrateLocalPlanToSupabase);
+const mockSavePlanToSupabase = vi.mocked(savePlanToSupabase);
+
+const supabaseClient = { from: vi.fn() };
+
+const savedSupabasePlan = {
+  activePage: "Dashboard",
+  profile: {
+    location: "Queens, NY",
+    apartmentType: "studio",
+    moveInDate: "2026-08-01",
+    totalBudget: 1800,
+    preference: "mix",
+    stylePreference: "warm minimal",
+    ownedItems: ["mattress"]
+  },
+  checklist: [
+    {
+      id: "desk",
+      name: "Desk or work table",
+      category: "Work",
+      priority: "soon",
+      suggestedBudget: 125,
+      status: "saved",
+      sourceIds: ["real-simple-first-apartment"]
+    }
+  ],
+  listings: [
+    {
+      id: "explore-desk",
+      title: "Compact desk",
+      price: 95,
+      source: "Explore",
+      url: "https://example.com/desk",
+      checklistItemId: "desk",
+      category: "Work",
+      condition: "new",
+      logistics: "delivery available",
+      savedFrom: "explore"
+    }
+  ]
+} as const;
 
 describe("NestHaul app workflow", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    window.sessionStorage.clear();
+    vi.clearAllMocks();
+    mockCreateBrowserSupabaseClient.mockReturnValue(supabaseClient as never);
+    mockLoadPlanFromSupabase.mockResolvedValue(null);
+    mockMigrateLocalPlanToSupabase.mockResolvedValue(null);
+    mockSavePlanToSupabase.mockResolvedValue();
     mockUseAuth.mockReturnValue({
       isConfigured: false,
       isLoading: false,
       logout: vi.fn(),
+      userId: null,
       userEmail: null
     });
   });
@@ -67,9 +130,10 @@ describe("NestHaul app workflow", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /^profile$/i }));
 
-    expect(screen.getByLabelText(/where are you moving to/i)).toHaveValue("");
-    expect(screen.getByLabelText(/total budget/i)).toHaveValue(0);
+    expect(screen.getByLabelText(/where are you moving to/i)).toHaveValue("Queens, NY");
+    expect(screen.getByLabelText(/total budget/i)).toHaveValue(1800);
     expect(window.localStorage.getItem("nesthaul-plan")).toBeNull();
+    expect(window.sessionStorage.getItem("nesthaul-session-plan")).toContain("Queens, NY");
   });
 
   it("saves Explore items to the Dashboard saved listings", async () => {
@@ -119,29 +183,55 @@ describe("NestHaul app workflow", () => {
     }
   });
 
-  it("stores and restores the working plan only when a user is logged in", async () => {
+  it("loads logged-in user data from Supabase and saves changes back", async () => {
     mockUseAuth.mockReturnValue({
       isConfigured: true,
       isLoading: false,
       logout: vi.fn(),
+      userId: "user-123",
       userEmail: "rushil@example.com"
     });
+    mockLoadPlanFromSupabase.mockResolvedValue(savedSupabasePlan);
 
-    const { unmount } = render(<NestHaulApp />);
-    const firstExploreItem = screen.getAllByTestId("explore-item")[0];
-    const title = within(firstExploreItem).getByRole("heading").textContent ?? "";
-
-    await userEvent.click(within(firstExploreItem).getByRole("button", { name: /save to list/i }));
+    render(<NestHaulApp />);
 
     await waitFor(() => {
-      expect(window.localStorage.getItem("nesthaul-plan:rushil@example.com")).toContain(title);
+      expect(mockLoadPlanFromSupabase).toHaveBeenCalledWith(supabaseClient, "user-123");
     });
-
-    unmount();
-    render(<NestHaulApp />);
 
     expect(screen.getByRole("button", { name: /^explore$/i })).toHaveAttribute("aria-current", "page");
     await userEvent.click(screen.getByRole("button", { name: /^dashboard$/i }));
-    expect(screen.getByText(title)).toBeInTheDocument();
+    expect(screen.getByText("Compact desk")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /remove compact desk/i }));
+
+    await waitFor(() => {
+      expect(mockSavePlanToSupabase).toHaveBeenLastCalledWith(
+        supabaseClient,
+        "user-123",
+        expect.objectContaining({ listings: [] })
+      );
+    });
+    expect(window.localStorage.getItem("nesthaul-plan:rushil@example.com")).toBeNull();
+  });
+
+  it("migrates a session plan to Supabase when a user logs in", async () => {
+    window.sessionStorage.setItem("nesthaul-session-plan", JSON.stringify(savedSupabasePlan));
+    mockUseAuth.mockReturnValue({
+      isConfigured: true,
+      isLoading: false,
+      logout: vi.fn(),
+      userId: "user-123",
+      userEmail: "rushil@example.com"
+    });
+    mockMigrateLocalPlanToSupabase.mockResolvedValue(savedSupabasePlan);
+
+    render(<NestHaulApp />);
+
+    await waitFor(() => {
+      expect(mockMigrateLocalPlanToSupabase).toHaveBeenCalledWith(supabaseClient, "user-123", savedSupabasePlan);
+    });
+
+    expect(window.sessionStorage.getItem("nesthaul-session-plan")).toBeNull();
   });
 });

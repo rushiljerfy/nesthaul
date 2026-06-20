@@ -3,7 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { calculateDashboardSummary } from "@/lib/budget";
 import { createMoveInChecklist } from "@/lib/checklist";
-import { clearSavedPlan, loadSavedPlan, savePlan } from "@/lib/storage";
+import { createBrowserSupabaseClient } from "@/lib/supabase";
+import { loadPlanFromSupabase, migrateLocalPlanToSupabase, savePlanToSupabase } from "@/lib/supabase-persistence";
+import {
+  clearSavedPlan,
+  clearSessionPlan,
+  loadSavedPlan,
+  loadSessionPlan,
+  saveSessionPlan
+} from "@/lib/storage";
 import { useAuth } from "@/lib/useAuth";
 import type { AppPage, ChecklistItem, ChecklistStatus, Listing, OnboardingProfile } from "@/lib/types";
 import { AppNav } from "./AppNav";
@@ -24,61 +32,156 @@ const defaultProfile: OnboardingProfile = {
 };
 
 export function NestHaulApp() {
-  const { isLoading: isAuthLoading, logout, userEmail } = useAuth();
+  const supabaseClient = useMemo(() => createBrowserSupabaseClient(), []);
+  const { isLoading: isAuthLoading, logout, userEmail, userId } = useAuth();
   const [stage, setStage] = useState<"landing" | "onboarding" | "app">("app");
   const [activePage, setActivePage] = useState<AppPage>("Explore");
   const [profile, setProfile] = useState<OnboardingProfile | null>(defaultProfile);
   const [checklist, setChecklist] = useState<ChecklistItem[]>(() => createMoveInChecklist());
   const [listings, setListings] = useState<Listing[]>([]);
   const [hasLoadedSavedPlan, setHasLoadedSavedPlan] = useState(false);
+  const [isPlanLoading, setIsPlanLoading] = useState(false);
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
+  const [persistenceError, setPersistenceError] = useState("");
+  const [hasRemotePlan, setHasRemotePlan] = useState<boolean | null>(null);
 
   const summary = useMemo(
     () => calculateDashboardSummary(profile?.totalBudget ?? 0, checklist, listings),
     [profile?.totalBudget, checklist, listings]
   );
 
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isAuthLoading) {
       return;
     }
 
-    if (!userEmail) {
-      clearSavedPlan();
-      setProfile(defaultProfile);
-      setChecklist(createMoveInChecklist());
-      setListings([]);
-      setActivePage("Explore");
-      setStage("app");
-      setHasLoadedSavedPlan(true);
+    let isCancelled = false;
+
+    async function loadPlan() {
+      setHasLoadedSavedPlan(false);
+      setPersistenceError("");
+
+      if (!userId || !supabaseClient) {
+        clearSavedPlan();
+        const sessionPlan = loadSessionPlan();
+
+        setProfile(sessionPlan?.profile ?? defaultProfile);
+        setChecklist(sessionPlan?.checklist ?? createMoveInChecklist());
+        setListings(sessionPlan?.listings ?? []);
+        setActivePage(sessionPlan?.activePage ?? "Explore");
+        setStage("app");
+        setHasRemotePlan(null);
+        setHasLoadedSavedPlan(true);
+        return;
+      }
+
+      setIsPlanLoading(true);
+
+      try {
+        const localPlan = loadSessionPlan() ?? loadSavedPlan(userEmail);
+        const loadedPlan = localPlan
+          ? await migrateLocalPlanToSupabase(supabaseClient, userId, localPlan)
+          : await loadPlanFromSupabase(supabaseClient, userId);
+
+        if (isCancelled) {
+          return;
+        }
+
+        if (loadedPlan) {
+          setProfile(loadedPlan.profile);
+          setChecklist(loadedPlan.checklist);
+          setListings(loadedPlan.listings);
+          setHasRemotePlan(true);
+        } else {
+          setProfile(defaultProfile);
+          setChecklist(createMoveInChecklist());
+          setListings([]);
+          setHasRemotePlan(false);
+        }
+
+        clearSessionPlan();
+        clearSavedPlan(userEmail);
+        setActivePage("Explore");
+        setStage("app");
+        setHasLoadedSavedPlan(true);
+      } catch (error) {
+        if (isCancelled) {
+          return;
+        }
+
+        setProfile(defaultProfile);
+        setChecklist(createMoveInChecklist());
+        setListings([]);
+        setActivePage("Explore");
+        setStage("app");
+        setHasRemotePlan(false);
+        setPersistenceError(error instanceof Error ? error.message : "Failed to load saved plan.");
+        setHasLoadedSavedPlan(true);
+      } finally {
+        if (!isCancelled) {
+          setIsPlanLoading(false);
+        }
+      }
+    }
+
+    loadPlan();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isAuthLoading, supabaseClient, userEmail, userId]);
+  useEffect(() => {
+    if (!hasLoadedSavedPlan || !profile) {
       return;
     }
 
-    const savedPlan = loadSavedPlan(userEmail);
-
-    if (savedPlan) {
-      setProfile(savedPlan.profile);
-      setChecklist(savedPlan.checklist);
-      setListings(savedPlan.listings);
-    } else {
-      setProfile(defaultProfile);
-      setChecklist(createMoveInChecklist());
-      setListings([]);
+    if (!userId || !supabaseClient) {
+      saveSessionPlan({ activePage, profile, checklist, listings });
+      return;
     }
 
-    setActivePage("Explore");
-    setStage("app");
-    setHasLoadedSavedPlan(true);
-  }, [isAuthLoading, userEmail]);
-  /* eslint-enable react-hooks/set-state-in-effect */
+    const client = supabaseClient;
+    const currentUserId = userId;
+    const currentProfile = profile;
+    let isCancelled = false;
+
+    async function saveRemotePlan() {
+      setIsSavingPlan(true);
+      setPersistenceError("");
+
+      try {
+        await savePlanToSupabase(client, currentUserId, { activePage, profile: currentProfile, checklist, listings });
+
+        if (!isCancelled) {
+          setHasRemotePlan(true);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          setPersistenceError(error instanceof Error ? error.message : "Failed to save plan.");
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsSavingPlan(false);
+        }
+      }
+    }
+
+    saveRemotePlan();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [activePage, checklist, hasLoadedSavedPlan, listings, profile, supabaseClient, userId]);
 
   useEffect(() => {
-    if (!hasLoadedSavedPlan || !profile || !userEmail) {
+    if (userId) {
       return;
     }
 
-    savePlan({ activePage, profile, checklist, listings }, userEmail);
-  }, [activePage, checklist, hasLoadedSavedPlan, listings, profile, userEmail]);
+    if (!userEmail) {
+      clearSavedPlan();
+    }
+  }, [userEmail, userId]);
 
   function handleOnboardingComplete(nextProfile: OnboardingProfile) {
     setProfile(nextProfile);
@@ -157,6 +260,26 @@ export function NestHaulApp() {
       {stage === "app" && profile ? (
         <>
           <AppNav activePage={activePage} onNavigate={setActivePage} onLogout={logout} userEmail={userEmail} />
+          {isPlanLoading ? (
+            <div className="persistence-message" role="status">
+              Loading saved plan...
+            </div>
+          ) : null}
+          {persistenceError ? (
+            <div className="form-errors" role="alert">
+              <p>{persistenceError}</p>
+            </div>
+          ) : null}
+          {userId && hasRemotePlan === false && !isPlanLoading ? (
+            <div className="persistence-message" role="status">
+              No saved plan yet. Save your profile or an Explore item to start one.
+            </div>
+          ) : null}
+          {isSavingPlan ? (
+            <div className="persistence-message" role="status">
+              Saving plan...
+            </div>
+          ) : null}
           {activePage === "Dashboard" ? (
             <DashboardPage
               profile={profile}
