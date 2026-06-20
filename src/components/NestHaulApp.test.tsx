@@ -202,6 +202,7 @@ describe("NestHaul app workflow", () => {
     expect(screen.getByRole("button", { name: /^explore$/i })).toHaveAttribute("aria-current", "page");
     await userEvent.click(screen.getByRole("button", { name: /^dashboard$/i }));
     expect(screen.getByText("Compact desk")).toBeInTheDocument();
+    expect(screen.getByText("Planned spend").parentElement).toHaveTextContent("$95");
 
     await userEvent.click(screen.getByRole("button", { name: /remove compact desk/i }));
 
