@@ -31,6 +31,7 @@ describe("NestHaul app workflow", () => {
     expect(screen.getByText(/apartment essentials by category/i)).toBeInTheDocument();
     expect(screen.getByText(/compare options before you buy/i)).toBeInTheDocument();
     expect(screen.queryByText(/research notes/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/sign up to save your plan across devices/i)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /^explore$/i }));
 
@@ -44,6 +45,7 @@ describe("NestHaul app workflow", () => {
     await completeOnboarding();
     await userEvent.click(screen.getByRole("button", { name: /^profile$/i }));
     expect(screen.getByLabelText(/where are you moving to/i)).toBeInTheDocument();
+    expect(screen.getByText(/sign up to save your plan across devices/i)).toBeInTheDocument();
     await userEvent.clear(screen.getByLabelText(/where are you moving to/i));
     await userEvent.type(screen.getByLabelText(/where are you moving to/i), "Queens, NY");
     await userEvent.clear(screen.getByLabelText(/total budget/i));

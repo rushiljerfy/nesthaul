@@ -1,6 +1,7 @@
 "use client";
 
 import type { ChecklistItem, ChecklistStatus, Listing, OnboardingProfile } from "@/lib/types";
+import { AuthCta } from "./AuthCta";
 import { ChecklistManager } from "./ChecklistManager";
 import { Dashboard } from "./Dashboard";
 import { SavedListings } from "./SavedListings";
@@ -13,6 +14,7 @@ interface DashboardPageProps {
   onAddListing: (listing: Listing) => void;
   onRemoveListing: (listingId: string) => void;
   onUpdateStatus: (itemId: string, status: ChecklistStatus) => void;
+  showAuthCta?: boolean;
 }
 
 export function DashboardPage({
@@ -22,10 +24,12 @@ export function DashboardPage({
   plannedSpend,
   onAddListing,
   onRemoveListing,
-  onUpdateStatus
+  onUpdateStatus,
+  showAuthCta = false
 }: DashboardPageProps) {
   return (
     <>
+      {showAuthCta ? <AuthCta /> : null}
       <Dashboard profile={profile} checklist={checklist} listings={listings} />
       <SavedListings
         checklist={checklist}

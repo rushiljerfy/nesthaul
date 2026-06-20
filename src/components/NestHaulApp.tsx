@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { calculateDashboardSummary } from "@/lib/budget";
 import { createMoveInChecklist } from "@/lib/checklist";
 import { loadSavedPlan, savePlan } from "@/lib/storage";
+import { useAuth } from "@/lib/useAuth";
 import type { AppPage, ChecklistItem, ChecklistStatus, Listing, OnboardingProfile } from "@/lib/types";
 import { AppNav } from "./AppNav";
 import { DashboardPage } from "./DashboardPage";
@@ -13,6 +14,7 @@ import { OnboardingForm } from "./OnboardingForm";
 import { ProfilePage } from "./ProfilePage";
 
 export function NestHaulApp() {
+  const { logout, userEmail } = useAuth();
   const [stage, setStage] = useState<"landing" | "onboarding" | "app">("landing");
   const [activePage, setActivePage] = useState<AppPage>("Dashboard");
   const [profile, setProfile] = useState<OnboardingProfile | null>(null);
@@ -125,7 +127,7 @@ export function NestHaulApp() {
       {stage === "onboarding" ? <OnboardingForm onComplete={handleOnboardingComplete} /> : null}
       {stage === "app" && profile ? (
         <>
-          <AppNav activePage={activePage} onNavigate={setActivePage} />
+          <AppNav activePage={activePage} onNavigate={setActivePage} onLogout={logout} userEmail={userEmail} />
           {activePage === "Dashboard" ? (
             <DashboardPage
               profile={profile}
@@ -135,9 +137,12 @@ export function NestHaulApp() {
               onAddListing={addListing}
               onRemoveListing={removeListing}
               onUpdateStatus={updateChecklistStatus}
+              showAuthCta={!userEmail}
             />
           ) : null}
-          {activePage === "Profile" ? <ProfilePage profile={profile} onSaveProfile={saveProfile} /> : null}
+          {activePage === "Profile" ? (
+            <ProfilePage profile={profile} onSaveProfile={saveProfile} showAuthCta={!userEmail} />
+          ) : null}
           {activePage === "Explore" ? <ExplorePage savedListings={listings} onSaveItem={saveExploreItem} /> : null}
         </>
       ) : null}
