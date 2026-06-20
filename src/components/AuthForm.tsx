@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase";
 
 type AuthMode = "login" | "signup";
@@ -37,13 +38,21 @@ function isValidEmail(value: string) {
 }
 
 export function AuthForm({ mode, supabaseClient }: AuthFormProps) {
+  const router = useRouter();
   const client = useMemo(() => supabaseClient ?? createBrowserSupabaseClient(), [supabaseClient]);
+  const [activeMode, setActiveMode] = useState<AuthMode>(mode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const modeCopy = copy[mode];
+  const modeCopy = copy[activeMode];
+
+  function switchMode(nextMode: AuthMode) {
+    setActiveMode(nextMode);
+    setError(null);
+    setStatus(null);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -70,7 +79,7 @@ export function AuthForm({ mode, supabaseClient }: AuthFormProps) {
     try {
       const credentials = { email: email.trim(), password };
       const result =
-        mode === "login"
+        activeMode === "login"
           ? client.auth.signInWithPassword
             ? await client.auth.signInWithPassword(credentials)
             : { error: { message: "Login is not available." } }
@@ -84,6 +93,10 @@ export function AuthForm({ mode, supabaseClient }: AuthFormProps) {
       }
 
       setStatus(modeCopy.success);
+
+      if (activeMode === "login") {
+        router.push("/");
+      }
     } catch {
       setError("Authentication failed. Check your Supabase settings and try again.");
     } finally {
@@ -112,6 +125,24 @@ export function AuthForm({ mode, supabaseClient }: AuthFormProps) {
       ) : null}
 
       <form className="auth-form" noValidate onSubmit={handleSubmit}>
+        <div className="auth-mode-switch" aria-label="Authentication options">
+          <button
+            aria-label="Show log in form"
+            aria-pressed={activeMode === "login"}
+            type="button"
+            onClick={() => switchMode("login")}
+          >
+            Log in
+          </button>
+          <button
+            aria-label="Show sign up form"
+            aria-pressed={activeMode === "signup"}
+            type="button"
+            onClick={() => switchMode("signup")}
+          >
+            Sign up
+          </button>
+        </div>
         <label>
           Email
           <input
@@ -126,7 +157,7 @@ export function AuthForm({ mode, supabaseClient }: AuthFormProps) {
         <label>
           Password
           <input
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
+            autoComplete={activeMode === "login" ? "current-password" : "new-password"}
             minLength={6}
             name="password"
             onChange={(event) => setPassword(event.target.value)}
