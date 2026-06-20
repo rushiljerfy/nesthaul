@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 import { NestHaulApp } from "./NestHaulApp";
@@ -30,6 +30,7 @@ describe("NestHaul app workflow", () => {
     expect(screen.getByRole("button", { name: /^profile$/i })).toBeInTheDocument();
     expect(screen.getByText(/apartment essentials by category/i)).toBeInTheDocument();
     expect(screen.getByText(/compare options before you buy/i)).toBeInTheDocument();
+    expect(screen.queryByText(/research notes/i)).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: /^explore$/i }));
 
@@ -42,8 +43,9 @@ describe("NestHaul app workflow", () => {
 
     await completeOnboarding();
     await userEvent.click(screen.getByRole("button", { name: /^profile$/i }));
-    await userEvent.clear(screen.getByLabelText(/location/i));
-    await userEvent.type(screen.getByLabelText(/location/i), "Queens, NY");
+    expect(screen.getByLabelText(/where are you moving to/i)).toBeInTheDocument();
+    await userEvent.clear(screen.getByLabelText(/where are you moving to/i));
+    await userEvent.type(screen.getByLabelText(/where are you moving to/i), "Queens, NY");
     await userEvent.clear(screen.getByLabelText(/total budget/i));
     await userEvent.type(screen.getByLabelText(/total budget/i), "1800");
     await userEvent.click(screen.getByRole("button", { name: /save profile/i }));
@@ -73,5 +75,43 @@ describe("NestHaul app workflow", () => {
 
     expect(screen.getByText(title ?? "")).toBeInTheDocument();
     expect(screen.getByText(/saved from explore/i)).toBeInTheDocument();
+  });
+
+  it("removes saved Dashboard items from UI, Explore saved state, and localStorage", async () => {
+    render(<NestHaulApp />);
+
+    await completeOnboarding();
+    await userEvent.click(screen.getByRole("button", { name: /^explore$/i }));
+
+    const firstExploreItem = screen.getAllByTestId("explore-item")[0];
+    const title = within(firstExploreItem).getByRole("heading").textContent ?? "";
+    await userEvent.click(within(firstExploreItem).getByRole("button", { name: /save to list/i }));
+
+    await userEvent.click(screen.getByRole("button", { name: /^dashboard$/i }));
+    await userEvent.click(screen.getByRole("button", { name: new RegExp(`remove ${title}`, "i") }));
+
+    expect(screen.queryByText(title)).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem("nesthaul-plan")).not.toContain(title);
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: /^explore$/i }));
+
+    const itemAgain = screen.getAllByTestId("explore-item")[0];
+    expect(within(itemAgain).getByRole("button", { name: /save to list/i })).toBeEnabled();
+  });
+
+  it("renders scrollable Explore carousels with at least seven items per category", async () => {
+    render(<NestHaulApp />);
+
+    await completeOnboarding();
+    await userEvent.click(screen.getByRole("button", { name: /^explore$/i }));
+
+    for (const category of ["Sleep", "Work", "Kitchen", "Bathroom", "Cleaning", "Storage", "Living"]) {
+      const group = screen.getByRole("region", { name: category });
+
+      expect(within(group).getAllByTestId("explore-item").length).toBeGreaterThanOrEqual(7);
+    }
   });
 });

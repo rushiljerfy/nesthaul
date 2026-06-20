@@ -1,6 +1,5 @@
 "use client";
 
-import { sourceNotes } from "@/lib/source-notes";
 import type { ChecklistItem, ChecklistStatus, Listing, OnboardingProfile } from "@/lib/types";
 import { ChecklistManager } from "./ChecklistManager";
 import { Dashboard } from "./Dashboard";
@@ -12,6 +11,7 @@ interface DashboardPageProps {
   listings: Listing[];
   plannedSpend: number;
   onAddListing: (listing: Listing) => void;
+  onRemoveListing: (listingId: string) => void;
   onUpdateStatus: (itemId: string, status: ChecklistStatus) => void;
 }
 
@@ -21,6 +21,7 @@ export function DashboardPage({
   listings,
   plannedSpend,
   onAddListing,
+  onRemoveListing,
   onUpdateStatus
 }: DashboardPageProps) {
   return (
@@ -32,18 +33,9 @@ export function DashboardPage({
         totalBudget={profile.totalBudget}
         plannedSpend={plannedSpend}
         onAddListing={onAddListing}
+        onRemoveListing={onRemoveListing}
       />
       <ChecklistManager checklist={checklist} onUpdateStatus={onUpdateStatus} />
-      <section className="source-strip">
-        <p className="eyebrow">Research notes</p>
-        <div>
-          {sourceNotes.map((source) => (
-            <a href={source.url} key={source.id} target="_blank" rel="noreferrer" title={source.note}>
-              {source.title}
-            </a>
-          ))}
-        </div>
-      </section>
     </>
   );
 }

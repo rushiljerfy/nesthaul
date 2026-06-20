@@ -43,6 +43,7 @@ export function ProfilePage({ profile, onSaveProfile }: ProfilePageProps) {
         headingEyebrow="Profile"
         headingTitle="Edit your move-in answers."
         initialProfile={profile}
+        locationLabel="Where are you moving to?"
         submitLabel="Save profile"
         onComplete={(nextProfile) => {
           onSaveProfile(nextProfile);

@@ -10,6 +10,7 @@ interface OnboardingFormProps {
   submitLabel?: string;
   headingEyebrow?: string;
   headingTitle?: string;
+  locationLabel?: string;
 }
 
 interface FormState {
@@ -37,7 +38,8 @@ export function OnboardingForm({
   initialProfile,
   submitLabel = "Create my plan",
   headingEyebrow = "Move-in plan",
-  headingTitle = "Tell NestHaul what you are working with."
+  headingTitle = "Tell NestHaul what you are working with.",
+  locationLabel = "Location"
 }: OnboardingFormProps) {
   const [form, setForm] = useState<FormState>(() => profileToFormState(initialProfile));
   const [errors, setErrors] = useState<string[]>([]);
@@ -86,7 +88,7 @@ export function OnboardingForm({
 
       <form className="onboarding-grid" onSubmit={handleSubmit}>
         <label>
-          Location
+          {locationLabel}
           <input
             value={form.location}
             onChange={(event) => updateField("location", event.target.value)}

@@ -383,6 +383,31 @@ textarea {
   margin: 6px 0;
 }
 
+.listing-title-row {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.icon-button {
+  display: inline-flex;
+  min-height: 32px;
+  min-width: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  background: var(--panel);
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  border-color: var(--rose);
+  color: var(--rose);
+}
+
 .saved-source {
   color: var(--accent-strong);
   font-weight: 800;

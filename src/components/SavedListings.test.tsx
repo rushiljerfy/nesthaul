@@ -26,6 +26,7 @@ describe("SavedListings", () => {
         totalBudget={800}
         plannedSpend={0}
         onAddListing={onAddListing}
+        onRemoveListing={vi.fn()}
       />
     );
 

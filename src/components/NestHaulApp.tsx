@@ -13,25 +13,41 @@ import { OnboardingForm } from "./OnboardingForm";
 import { ProfilePage } from "./ProfilePage";
 
 export function NestHaulApp() {
-  const [initialPlan] = useState(() => loadSavedPlan());
-  const [stage, setStage] = useState<"landing" | "onboarding" | "app">(() => (initialPlan ? "app" : "landing"));
-  const [activePage, setActivePage] = useState<AppPage>(() => initialPlan?.activePage ?? "Dashboard");
-  const [profile, setProfile] = useState<OnboardingProfile | null>(() => initialPlan?.profile ?? null);
-  const [checklist, setChecklist] = useState<ChecklistItem[]>(() => initialPlan?.checklist ?? []);
-  const [listings, setListings] = useState<Listing[]>(() => initialPlan?.listings ?? []);
+  const [stage, setStage] = useState<"landing" | "onboarding" | "app">("landing");
+  const [activePage, setActivePage] = useState<AppPage>("Dashboard");
+  const [profile, setProfile] = useState<OnboardingProfile | null>(null);
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [hasLoadedSavedPlan, setHasLoadedSavedPlan] = useState(false);
 
   const summary = useMemo(
     () => calculateDashboardSummary(profile?.totalBudget ?? 0, checklist, listings),
     [profile?.totalBudget, checklist, listings]
   );
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (!profile) {
+    const savedPlan = loadSavedPlan();
+
+    if (savedPlan) {
+      setProfile(savedPlan.profile);
+      setChecklist(savedPlan.checklist);
+      setListings(savedPlan.listings);
+      setActivePage(savedPlan.activePage);
+      setStage("app");
+    }
+
+    setHasLoadedSavedPlan(true);
+  }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    if (!hasLoadedSavedPlan || !profile) {
       return;
     }
 
     savePlan({ activePage, profile, checklist, listings });
-  }, [activePage, checklist, listings, profile]);
+  }, [activePage, checklist, hasLoadedSavedPlan, listings, profile]);
 
   function handleOnboardingComplete(nextProfile: OnboardingProfile) {
     setProfile(nextProfile);
@@ -47,6 +63,23 @@ export function NestHaulApp() {
   function addListing(listing: Listing) {
     setListings((current) => [...current, listing]);
     updateChecklistStatus(listing.checklistItemId, "saved");
+  }
+
+  function removeListing(listingId: string) {
+    const removedListing = listings.find((listing) => listing.id === listingId);
+    const remainingListings = listings.filter((listing) => listing.id !== listingId);
+
+    setListings(remainingListings);
+
+    if (!removedListing || remainingListings.some((listing) => listing.checklistItemId === removedListing.checklistItemId)) {
+      return;
+    }
+
+    setChecklist((current) =>
+      current.map((item) =>
+        item.id === removedListing.checklistItemId && item.status === "saved" ? { ...item, status: "missing" } : item
+      )
+    );
   }
 
   function saveExploreItem(item: Parameters<React.ComponentProps<typeof ExplorePage>["onSaveItem"]>[0]) {
@@ -100,6 +133,7 @@ export function NestHaulApp() {
               listings={listings}
               plannedSpend={summary.plannedSpend}
               onAddListing={addListing}
+              onRemoveListing={removeListing}
               onUpdateStatus={updateChecklistStatus}
             />
           ) : null}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LinkIcon, Plus } from "lucide-react";
+import { LinkIcon, Plus, X } from "lucide-react";
 import { assessListing } from "@/lib/recommendations";
 import { formatCurrency } from "@/lib/format";
 import type { ChecklistItem, Listing } from "@/lib/types";
@@ -12,6 +12,7 @@ interface SavedListingsProps {
   totalBudget: number;
   plannedSpend: number;
   onAddListing: (listing: Listing) => void;
+  onRemoveListing: (listingId: string) => void;
 }
 
 interface ListingFormState {
@@ -43,7 +44,8 @@ export function SavedListings({
   listings,
   totalBudget,
   plannedSpend,
-  onAddListing
+  onAddListing,
+  onRemoveListing
 }: SavedListingsProps) {
   const [form, setForm] = useState<ListingFormState>(initialForm);
   const [error, setError] = useState("");
@@ -157,7 +159,17 @@ export function SavedListings({
             return (
               <article className="listing-row" key={listing.id}>
                 <div>
-                  <h3>{listing.title}</h3>
+                  <div className="listing-title-row">
+                    <h3>{listing.title}</h3>
+                    <button
+                      aria-label={`Remove ${listing.title}`}
+                      className="icon-button"
+                      type="button"
+                      onClick={() => onRemoveListing(listing.id)}
+                    >
+                      <X aria-hidden="true" size={16} />
+                    </button>
+                  </div>
                   <p>
                     {listing.source} · {listing.condition} · {listing.logistics}
                   </p>
