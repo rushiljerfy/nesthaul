@@ -31,4 +31,12 @@ describe("Supabase database schema", () => {
     expect(migrationSql).not.toContain("using (true)");
     expect(migrationSql).not.toContain("to anon");
   });
+
+  it("grants table access to authenticated users for RLS-backed API requests", () => {
+    expect(migrationSql).toContain("grant usage on schema public to authenticated");
+
+    for (const table of userOwnedTables) {
+      expect(migrationSql).toContain(`grant select, insert, update, delete on public.${table} to authenticated`);
+    }
+  });
 });

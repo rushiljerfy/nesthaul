@@ -1,6 +1,8 @@
 -- NestHaul user-owned persistence schema.
 -- Run this in the Supabase SQL editor for the project that backs .env.local.
 
+create extension if not exists pgcrypto;
+
 create table if not exists public.move_plans (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -94,6 +96,12 @@ alter table public.move_plans enable row level security;
 alter table public.checklist_items enable row level security;
 alter table public.saved_listings enable row level security;
 alter table public.explore_saved_items enable row level security;
+
+grant usage on schema public to authenticated;
+grant select, insert, update, delete on public.move_plans to authenticated;
+grant select, insert, update, delete on public.checklist_items to authenticated;
+grant select, insert, update, delete on public.saved_listings to authenticated;
+grant select, insert, update, delete on public.explore_saved_items to authenticated;
 
 drop policy if exists "move_plans_select_own" on public.move_plans;
 create policy "move_plans_select_own"

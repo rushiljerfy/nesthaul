@@ -127,8 +127,22 @@ async function replaceRows<T>(client: DatabaseClient, table: string, userId: str
 
 function throwIfSupabaseError(error: { message: string } | null | undefined) {
   if (error) {
-    throw new Error(error.message);
+    throw new Error(formatSupabasePersistenceError(error.message));
   }
+}
+
+export function formatSupabasePersistenceError(message: string) {
+  const normalizedMessage = message.toLowerCase();
+
+  if (
+    normalizedMessage.includes("schema cache") ||
+    normalizedMessage.includes("could not find the table") ||
+    normalizedMessage.includes("relation") && normalizedMessage.includes("does not exist")
+  ) {
+    return "Supabase database tables are not set up yet. Run supabase/migrations/202606200001_supabase_persistence.sql in the Supabase SQL editor, then refresh.";
+  }
+
+  return message;
 }
 
 function movePlanToRow(userId: string, plan: SavedPlan): MovePlanRow {

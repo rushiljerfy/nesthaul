@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatSupabasePersistenceError,
   loadPlanFromSupabase,
   migrateLocalPlanToSupabase,
   savePlanToSupabase,
@@ -99,6 +100,12 @@ describe("Supabase persistence", () => {
     expect(client.tables.checklist_items).toHaveLength(2);
     expect(client.tables.saved_listings).toHaveLength(1);
     expect(await loadPlanFromSupabase(client, userId)).toEqual(savedPlan);
+  });
+
+  it("formats missing-table errors with migration setup guidance", () => {
+    expect(formatSupabasePersistenceError("Could not find the table 'public.move_plans' in the schema cache")).toBe(
+      "Supabase database tables are not set up yet. Run supabase/migrations/202606200001_supabase_persistence.sql in the Supabase SQL editor, then refresh."
+    );
   });
 });
 
