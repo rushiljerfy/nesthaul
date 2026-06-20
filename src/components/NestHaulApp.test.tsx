@@ -38,6 +38,7 @@ describe("NestHaul app workflow", () => {
 
     expect(screen.getByText(/apartment essentials by category/i)).toBeInTheDocument();
     expect(screen.getByText(/compare options before you buy/i)).toBeInTheDocument();
+    expect(screen.getByText("Planned spend").parentElement).toHaveTextContent("$0");
     expect(screen.queryByText(/research notes/i)).not.toBeInTheDocument();
     expect(screen.getByText(/sign up to save your plan across devices/i)).toBeInTheDocument();
 

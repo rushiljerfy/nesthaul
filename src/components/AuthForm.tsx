@@ -32,6 +32,10 @@ const copy = {
   }
 };
 
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
 export function AuthForm({ mode, supabaseClient }: AuthFormProps) {
   const client = useMemo(() => supabaseClient ?? createBrowserSupabaseClient(), [supabaseClient]);
   const [email, setEmail] = useState("");
@@ -51,19 +55,40 @@ export function AuthForm({ mode, supabaseClient }: AuthFormProps) {
       return;
     }
 
-    setIsSubmitting(true);
-
-    const authMethod = mode === "login" ? client.auth.signInWithPassword : client.auth.signUp;
-    const result = authMethod ? await authMethod({ email, password }) : { error: { message: "Auth is not available." } };
-
-    setIsSubmitting(false);
-
-    if (result.error) {
-      setError(result.error.message);
+    if (!isValidEmail(email)) {
+      setError("Enter a valid email address.");
       return;
     }
 
-    setStatus(modeCopy.success);
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const credentials = { email: email.trim(), password };
+      const result =
+        mode === "login"
+          ? client.auth.signInWithPassword
+            ? await client.auth.signInWithPassword(credentials)
+            : { error: { message: "Login is not available." } }
+          : client.auth.signUp
+            ? await client.auth.signUp(credentials)
+            : { error: { message: "Signup is not available." } };
+
+      if (result.error) {
+        setError(result.error.message);
+        return;
+      }
+
+      setStatus(modeCopy.success);
+    } catch {
+      setError("Authentication failed. Check your Supabase settings and try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -86,7 +111,7 @@ export function AuthForm({ mode, supabaseClient }: AuthFormProps) {
         </div>
       ) : null}
 
-      <form className="auth-form" onSubmit={handleSubmit}>
+      <form className="auth-form" noValidate onSubmit={handleSubmit}>
         <label>
           Email
           <input

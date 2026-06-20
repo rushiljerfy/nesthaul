@@ -41,4 +41,16 @@ describe("AuthForm", () => {
       password: "password123"
     });
   });
+
+  it("blocks signup when the email is not valid", async () => {
+    const signUp = vi.fn().mockResolvedValue({ error: null });
+    render(<AuthForm mode="signup" supabaseClient={{ auth: { signUp } }} />);
+
+    await userEvent.type(screen.getByLabelText(/email/i), "rushil");
+    await userEvent.type(screen.getByLabelText(/password/i), "password123");
+    await userEvent.click(screen.getByRole("button", { name: /sign up/i }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/valid email/i);
+    expect(signUp).not.toHaveBeenCalled();
+  });
 });
