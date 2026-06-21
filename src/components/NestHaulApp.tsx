@@ -13,7 +13,7 @@ import {
   saveSessionPlan
 } from "@/lib/storage";
 import { useAuth } from "@/lib/useAuth";
-import type { AppPage, ChecklistItem, ChecklistStatus, Listing, OnboardingProfile } from "@/lib/types";
+import type { AppPage, ChecklistItem, ChecklistStatus, Listing, OnboardingProfile, SavedPlan } from "@/lib/types";
 import { AppNav } from "./AppNav";
 import { DashboardPage } from "./DashboardPage";
 import { ExplorePage } from "./ExplorePage";
@@ -30,6 +30,8 @@ const defaultProfile: OnboardingProfile = {
   stylePreference: "",
   ownedItems: []
 };
+
+const defaultChecklist = createMoveInChecklist();
 
 export function NestHaulApp() {
   const supabaseClient = useMemo(() => createBrowserSupabaseClient(), []);
@@ -78,7 +80,8 @@ export function NestHaulApp() {
       setIsPlanLoading(true);
 
       try {
-        const localPlan = loadSessionPlan() ?? loadSavedPlan(userEmail);
+        const sessionPlan = loadSessionPlan();
+        const localPlan = sessionPlan && hasMeaningfulPlanChanges(sessionPlan) ? sessionPlan : loadSavedPlan(userEmail);
         const loadedPlan = localPlan
           ? await migrateLocalPlanToSupabase(supabaseClient, userId, localPlan)
           : await loadPlanFromSupabase(supabaseClient, userId);
@@ -253,13 +256,34 @@ export function NestHaulApp() {
     );
   }
 
+  async function handleLogout() {
+    if (userId && supabaseClient && profile) {
+      setIsSavingPlan(true);
+      setPersistenceError("");
+
+      try {
+        await savePlanToSupabase(supabaseClient, userId, { activePage, profile, checklist, listings });
+      } catch (error) {
+        setPersistenceError(error instanceof Error ? error.message : "Failed to save plan before logging out.");
+        setIsSavingPlan(false);
+        return;
+      }
+
+      setIsSavingPlan(false);
+    }
+
+    clearSessionPlan();
+    await logout();
+    clearSessionPlan();
+  }
+
   return (
     <main className="app-shell">
       {stage === "landing" ? <LandingPage onStart={() => setStage("onboarding")} /> : null}
       {stage === "onboarding" ? <OnboardingForm onComplete={handleOnboardingComplete} /> : null}
       {stage === "app" && profile ? (
         <>
-          <AppNav activePage={activePage} onNavigate={setActivePage} onLogout={logout} userEmail={userEmail} />
+          <AppNav activePage={activePage} onNavigate={setActivePage} onLogout={handleLogout} userEmail={userEmail} />
           {isPlanLoading ? (
             <div className="persistence-message" role="status">
               Loading saved plan...
@@ -299,5 +323,19 @@ export function NestHaulApp() {
         </>
       ) : null}
     </main>
+  );
+}
+
+function hasMeaningfulPlanChanges(plan: SavedPlan) {
+  return (
+    plan.listings.length > 0 ||
+    plan.profile.location !== defaultProfile.location ||
+    plan.profile.apartmentType !== defaultProfile.apartmentType ||
+    plan.profile.moveInDate !== defaultProfile.moveInDate ||
+    plan.profile.totalBudget !== defaultProfile.totalBudget ||
+    plan.profile.preference !== defaultProfile.preference ||
+    plan.profile.stylePreference !== defaultProfile.stylePreference ||
+    plan.profile.ownedItems.length > 0 ||
+    plan.checklist.some((item) => defaultChecklist.find((defaultItem) => defaultItem.id === item.id)?.status !== item.status)
   );
 }

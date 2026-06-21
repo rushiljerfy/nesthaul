@@ -216,6 +216,72 @@ describe("NestHaul app workflow", () => {
     expect(window.localStorage.getItem("nesthaul-plan:rushil@example.com")).toBeNull();
   });
 
+  it("flushes the current saved listing to Supabase before logout", async () => {
+    const logout = vi.fn();
+
+    mockUseAuth.mockReturnValue({
+      isConfigured: true,
+      isLoading: false,
+      logout,
+      userId: "user-123",
+      userEmail: "rushil@example.com"
+    });
+
+    render(<NestHaulApp />);
+
+    await waitFor(() => {
+      expect(mockLoadPlanFromSupabase).toHaveBeenCalledWith(supabaseClient, "user-123");
+    });
+
+    const firstExploreItem = screen.getAllByTestId("explore-item")[0];
+    const title = within(firstExploreItem).getByRole("heading").textContent ?? "";
+
+    await userEvent.click(within(firstExploreItem).getByRole("button", { name: /save to list/i }));
+    await userEvent.click(screen.getByRole("button", { name: /log out/i }));
+
+    await waitFor(() => {
+      expect(logout).toHaveBeenCalled();
+    });
+
+    expect(mockSavePlanToSupabase).toHaveBeenLastCalledWith(
+      supabaseClient,
+      "user-123",
+      expect.objectContaining({
+        listings: [expect.objectContaining({ title })]
+      })
+    );
+  });
+
+  it("does not overwrite Supabase listings with a blank anonymous session after logout", async () => {
+    const { unmount } = render(<NestHaulApp />);
+
+    await waitFor(() => {
+      expect(window.sessionStorage.getItem("nesthaul-session-plan")).toContain('"listings":[]');
+    });
+
+    unmount();
+    mockUseAuth.mockReturnValue({
+      isConfigured: true,
+      isLoading: false,
+      logout: vi.fn(),
+      userId: "user-123",
+      userEmail: "rushil@example.com"
+    });
+    mockLoadPlanFromSupabase.mockResolvedValue(savedSupabasePlan);
+
+    render(<NestHaulApp />);
+
+    await waitFor(() => {
+      expect(mockLoadPlanFromSupabase).toHaveBeenCalledWith(supabaseClient, "user-123");
+    });
+
+    expect(mockMigrateLocalPlanToSupabase).not.toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("button", { name: /^dashboard$/i }));
+
+    expect(screen.getByText("Compact desk")).toBeInTheDocument();
+  });
+
   it("migrates a session plan to Supabase when a user logs in", async () => {
     window.sessionStorage.setItem("nesthaul-session-plan", JSON.stringify(savedSupabasePlan));
     mockUseAuth.mockReturnValue({
