@@ -23,6 +23,13 @@ export function assessListing(
     };
   }
 
+  if (typeof listing.price !== "number" || !Number.isFinite(listing.price)) {
+    return {
+      recommendation: "Wait",
+      explanation: "Enter the listing price before deciding whether it fits the plan."
+    };
+  }
+
   if (plannedSpend + listing.price > totalBudget) {
     return {
       recommendation: "Skip",

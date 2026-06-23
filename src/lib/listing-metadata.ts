@@ -1,12 +1,13 @@
 import type { ChecklistItem, Listing } from "./types";
+import { parseListingUrl } from "./listing-url";
 
 export interface ListingMetadata {
   title: string;
-  price: number;
+  price: number | null;
   source: string;
   url: string;
   checklistItemId: string;
-  condition: Listing["condition"];
+  condition: Listing["condition"] | null;
   logistics: string;
   distance: string;
 }
@@ -16,10 +17,10 @@ interface ExtractMetadataOptions {
   url: string;
 }
 
-const notAvailable = "N/A";
-
 export function extractListingMetadata(html: string, { checklist = [], url }: ExtractMetadataOptions): ListingMetadata {
-  const source = sourceFromUrl(url);
+  const parsedUrl = parseListingUrl(url);
+  const source = parsedUrl?.sourceName ?? sourceFromUrl(url);
+  const normalizedUrl = parsedUrl?.normalizedUrl ?? url;
   const pageText = stripTags(html);
   const title = firstMeaningfulTitle([
     metaContent(html, "og:title"),
@@ -35,16 +36,16 @@ export function extractListingMetadata(html: string, { checklist = [], url }: Ex
     metaContent(html, "og:price:amount"),
     amazonPrice(html)
   ]);
-  const price = explicitPrice ? parsePrice(explicitPrice) : source.includes("amazon.") ? 0 : parseCurrencyPrice(pageText);
+  const price = explicitPrice ? parsePrice(explicitPrice) : parsedUrl?.sourceId === "amazon" ? null : parseCurrencyPrice(pageText);
   const logistics = inferLogistics(title);
   const condition = inferCondition(title);
   const checklistItemId = inferChecklistItemId(title, checklist);
 
   return {
-    title: title || notAvailable,
+    title,
     price,
-    source: source || notAvailable,
-    url,
+    source,
+    url: normalizedUrl,
     checklistItemId,
     condition,
     logistics,
@@ -77,7 +78,7 @@ function scoreChecklistItem(text: string, item: ChecklistItem) {
   return synonymScore + nameScore + idScore;
 }
 
-function inferCondition(text: string): Listing["condition"] {
+function inferCondition(text: string): Listing["condition"] | null {
   const normalizedText = normalize(text);
 
   if (normalizedText.includes("open box")) {
@@ -92,7 +93,7 @@ function inferCondition(text: string): Listing["condition"] {
     return "used";
   }
 
-  return "N/A";
+  return null;
 }
 
 function inferLogistics(text: string) {
@@ -110,14 +111,14 @@ function inferLogistics(text: string) {
     return "Pickup available";
   }
 
-  return notAvailable;
+  return "";
 }
 
 function parsePrice(value: string) {
   const match = value.match(/\$?\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]{1,2})?)/);
 
   if (!match) {
-    return 0;
+    return null;
   }
 
   return Number(match[1].replace(/,/g, ""));
@@ -127,7 +128,7 @@ function parseCurrencyPrice(value: string) {
   const match = value.match(/\$\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]{1,2})?)/);
 
   if (!match) {
-    return 0;
+    return null;
   }
 
   return Number(match[1].replace(/,/g, ""));

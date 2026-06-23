@@ -32,7 +32,7 @@ const initialForm: ListingFormState = {
   source: "",
   url: "",
   checklistItemId: "",
-  condition: "N/A",
+  condition: "unknown",
   logistics: "",
   distance: ""
 };
@@ -73,7 +73,11 @@ export function SavedListings({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ url: listingUrl.trim() })
       });
-      const result = (await response.json()) as Partial<ListingFormState> & { error?: string; price?: number };
+      const result = (await response.json()) as Partial<ListingFormState> & {
+        error?: string;
+        price?: number | null;
+        condition?: Listing["condition"] | null;
+      };
 
       if (!response.ok) {
         setError(result.error ?? "Could not read that listing. Check the link and try again.");
@@ -81,13 +85,13 @@ export function SavedListings({
       }
 
       setForm({
-        title: result.title ?? "N/A",
-        price: String(result.price ?? 0),
-        source: result.source ?? "N/A",
+        title: result.title ?? "",
+        price: result.price === null || result.price === undefined ? "" : String(result.price),
+        source: result.source ?? "",
         url: result.url ?? listingUrl.trim(),
         checklistItemId: result.checklistItemId ?? "",
-        condition: result.condition ?? "N/A",
-        logistics: result.logistics ?? "N/A",
+        condition: result.condition ?? "unknown",
+        logistics: result.logistics ?? "",
         distance: result.distance ?? ""
       });
       setStatus("Listing details loaded. Review and save when ready.");
@@ -107,16 +111,28 @@ export function SavedListings({
       return;
     }
 
+    if (!form.title.trim()) {
+      setError("Add a listing title before saving.");
+      return;
+    }
+
+    const price = Number(form.price);
+
+    if (!form.price.trim() || !Number.isFinite(price) || price < 0) {
+      setError("Enter the real listing price before saving.");
+      return;
+    }
+
     const listing: Listing = {
       id: globalThis.crypto?.randomUUID?.() ?? `listing-${Date.now()}`,
       title: form.title.trim(),
-      price: Number(form.price),
+      price,
       source: form.source.trim(),
       url: form.url.trim(),
       checklistItemId: selectedItem.id,
       category: selectedItem.category,
       condition: form.condition,
-      logistics: form.logistics.trim() || "N/A",
+      logistics: form.logistics.trim(),
       distance: form.distance ? Number(form.distance) : undefined
     };
 
@@ -198,6 +214,7 @@ export function SavedListings({
         <label>
           Condition
           <select value={form.condition} onChange={(event) => updateField("condition", event.target.value)}>
+            <option value="unknown">Unknown</option>
             <option value="N/A">N/A</option>
             <option value="used">Used</option>
             <option value="new">New</option>
@@ -240,7 +257,7 @@ export function SavedListings({
                     </button>
                   </div>
                   <p>
-                    {listing.source} · {listing.condition} · {listing.logistics}
+                    {listing.source} · {formatCondition(listing.condition)} · {listing.logistics || "Unknown logistics"}
                   </p>
                   {listing.savedFrom === "explore" ? <p className="saved-source">Saved from Explore</p> : null}
                   {listing.notes ? <p>{listing.notes}</p> : null}
@@ -261,4 +278,17 @@ export function SavedListings({
       </div>
     </section>
   );
+}
+
+function formatCondition(condition: Listing["condition"]) {
+  const labels: Record<Listing["condition"], string> = {
+    new: "New",
+    used: "Used",
+    "open-box": "Open box",
+    refurbished: "Refurbished",
+    unknown: "Unknown condition",
+    "N/A": "N/A"
+  };
+
+  return labels[condition];
 }

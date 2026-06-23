@@ -66,18 +66,18 @@ describe("SavedListings", () => {
     );
   });
 
-  it("shows N/A values returned by the listing reader and keeps distance optional", async () => {
+  it("requires user-entered price before saving when the reader cannot extract it", async () => {
     const onAddListing = vi.fn();
     vi.spyOn(globalThis, "fetch").mockResolvedValue({
       ok: true,
       json: async () => ({
-        title: "N/A",
-        price: 0,
-        source: "market.example.com",
-        url: "https://market.example.com/item",
+        title: "",
+        price: null,
+        source: "Facebook Marketplace",
+        url: "https://www.facebook.com/marketplace/item/1038206661965081/",
         checklistItemId: "mattress",
-        condition: "new",
-        logistics: "N/A",
+        condition: null,
+        logistics: "",
         distance: ""
       })
     } as Response);
@@ -93,14 +93,31 @@ describe("SavedListings", () => {
       />
     );
 
-    await userEvent.type(screen.getByLabelText(/listing url/i), "https://market.example.com/item");
+    await userEvent.type(screen.getByLabelText(/listing url/i), "https://www.facebook.com/marketplace/item/1038206661965081/");
     await userEvent.click(screen.getByRole("button", { name: /read listing/i }));
+
+    expect(await screen.findByDisplayValue("Facebook Marketplace")).toBeInTheDocument();
     await userEvent.click(await screen.findByRole("button", { name: /save listing/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/add a listing title/i);
+    expect(onAddListing).not.toHaveBeenCalled();
+
+    await userEvent.type(screen.getByLabelText(/^title$/i), "Used mattress");
+    await userEvent.click(screen.getByRole("button", { name: /save listing/i }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/enter the real listing price/i);
+    expect(onAddListing).not.toHaveBeenCalled();
+
+    await userEvent.type(screen.getByLabelText(/price/i), "75");
+    await userEvent.selectOptions(screen.getByLabelText(/condition/i), "used");
+    await userEvent.click(screen.getByRole("button", { name: /save listing/i }));
 
     expect(onAddListing).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: "N/A",
-        logistics: "N/A",
+        title: "Used mattress",
+        price: 75,
+        condition: "used",
+        logistics: "",
         distance: undefined
       })
     );

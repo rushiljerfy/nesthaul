@@ -68,25 +68,25 @@ describe("listing metadata extraction", () => {
       source: "shop.example.com",
       url: "https://shop.example.com/listings/mattress",
       checklistItemId: "mattress",
-      condition: "N/A",
-      logistics: "N/A",
+      condition: null,
+      logistics: "",
       distance: ""
     });
   });
 
-  it("uses N/A fallbacks when listing details are unavailable", () => {
+  it("uses empty and null fallbacks when listing details are unavailable", () => {
     const metadata = extractListingMetadata("<html><body>No product data here.</body></html>", {
       checklist,
       url: "https://market.example.com/unknown"
     });
 
     expect(metadata).toMatchObject({
-      title: "N/A",
-      price: 0,
+      title: "",
+      price: null,
       source: "market.example.com",
       checklistItemId: "",
-      condition: "N/A",
-      logistics: "N/A",
+      condition: null,
+      logistics: "",
       distance: ""
     });
   });
@@ -136,7 +136,7 @@ describe("listing metadata extraction", () => {
     });
 
     expect(metadata.title).toBe("agotnes foam mattress firm light blue");
-    expect(metadata.price).toBe(0);
+    expect(metadata.price).toBeNull();
   });
 
   it("can read currency-marked prices from page text", () => {
@@ -169,7 +169,19 @@ describe("listing metadata extraction", () => {
 
     expect(metadata.title).toBe("GAOMON Sectional Cushions Armrests Capacity");
     expect(metadata.price).toBe(99.99);
-    expect(metadata.condition).toBe("N/A");
+    expect(metadata.condition).toBeNull();
     expect(metadata.checklistItemId).toBe("sofa");
+  });
+
+  it("does not invent price or condition for Facebook Marketplace pages", () => {
+    const metadata = extractListingMetadata("<html><body>Facebook Marketplace</body></html>", {
+      checklist,
+      url: "https://www.facebook.com/marketplace/item/1038206661965081/?ref=category_feed&tracking=abc"
+    });
+
+    expect(metadata.source).toBe("Facebook Marketplace");
+    expect(metadata.url).toBe("https://www.facebook.com/marketplace/item/1038206661965081/");
+    expect(metadata.price).toBeNull();
+    expect(metadata.condition).toBeNull();
   });
 });

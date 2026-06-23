@@ -86,4 +86,11 @@ describe("assessListing", () => {
     expect(result.recommendation).toBe("Skip");
     expect(result.explanation).toContain("over your total budget");
   });
+
+  it("does not treat a missing listing price as a zero-dollar buy", () => {
+    const result = assessListing({ ...listing, price: undefined as unknown as number }, baseChecklist, 700, 100);
+
+    expect(result.recommendation).toBe("Wait");
+    expect(result.explanation).toMatch(/enter the listing price/i);
+  });
 });
