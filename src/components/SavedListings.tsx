@@ -24,7 +24,6 @@ interface ListingFormState {
   condition: Listing["condition"];
   logistics: string;
   distance: string;
-  notes: string;
 }
 
 const initialForm: ListingFormState = {
@@ -33,10 +32,9 @@ const initialForm: ListingFormState = {
   source: "",
   url: "",
   checklistItemId: "",
-  condition: "used",
+  condition: "N/A",
   logistics: "",
-  distance: "",
-  notes: ""
+  distance: ""
 };
 
 export function SavedListings({
@@ -48,18 +46,64 @@ export function SavedListings({
   onRemoveListing
 }: SavedListingsProps) {
   const [form, setForm] = useState<ListingFormState>(initialForm);
+  const [listingUrl, setListingUrl] = useState("");
   const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
+  const [isReadingListing, setIsReadingListing] = useState(false);
 
   function updateField(name: keyof ListingFormState, value: string) {
     setForm((current) => ({ ...current, [name]: value }));
+  }
+
+  async function handleReadListing(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError("");
+    setStatus("");
+
+    if (!listingUrl.trim()) {
+      setError("Paste a listing URL first.");
+      return;
+    }
+
+    setIsReadingListing(true);
+
+    try {
+      const response = await fetch("/api/listing-metadata", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url: listingUrl.trim() })
+      });
+      const result = (await response.json()) as Partial<ListingFormState> & { error?: string; price?: number };
+
+      if (!response.ok) {
+        setError(result.error ?? "Could not read that listing. Check the link and try again.");
+        return;
+      }
+
+      setForm({
+        title: result.title ?? "N/A",
+        price: String(result.price ?? 0),
+        source: result.source ?? "N/A",
+        url: result.url ?? listingUrl.trim(),
+        checklistItemId: result.checklistItemId ?? "",
+        condition: result.condition ?? "N/A",
+        logistics: result.logistics ?? "N/A",
+        distance: result.distance ?? ""
+      });
+      setStatus("Listing details loaded. Review and save when ready.");
+    } catch {
+      setError("Could not read that listing. Check the link and try again.");
+    } finally {
+      setIsReadingListing(false);
+    }
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const selectedItem = checklist.find((item) => item.id === form.checklistItemId);
 
-    if (!form.title.trim() || !form.price || !form.source.trim() || !form.url.trim() || !selectedItem || !form.logistics.trim()) {
-      setError("Title, price, source, URL, checklist item, and delivery or pickup info are required.");
+    if (!form.url.trim() || !selectedItem) {
+      setError("Read a listing URL and choose a checklist item before saving.");
       return;
     }
 
@@ -72,14 +116,15 @@ export function SavedListings({
       checklistItemId: selectedItem.id,
       category: selectedItem.category,
       condition: form.condition,
-      logistics: form.logistics.trim(),
-      distance: form.distance ? Number(form.distance) : undefined,
-      notes: form.notes.trim() || undefined
+      logistics: form.logistics.trim() || "N/A",
+      distance: form.distance ? Number(form.distance) : undefined
     };
 
     onAddListing(listing);
     setForm(initialForm);
+    setListingUrl("");
     setError("");
+    setStatus("");
   }
 
   return (
@@ -94,15 +139,42 @@ export function SavedListings({
           <p>{error}</p>
         </div>
       ) : null}
+      {status ? (
+        <div className="success-message" role="status">
+          {status}
+        </div>
+      ) : null}
 
-      <form className="listing-form" onSubmit={handleSubmit}>
+      <form className="listing-link-form" onSubmit={handleReadListing}>
+        <label>
+          Listing URL
+          <input
+            placeholder="Paste a marketplace, store, or product link"
+            type="url"
+            value={listingUrl}
+            onChange={(event) => setListingUrl(event.target.value)}
+          />
+        </label>
+        <button className="primary-button" disabled={isReadingListing} type="submit">
+          <Plus aria-hidden="true" size={18} />
+          {isReadingListing ? "Reading..." : "Read listing"}
+        </button>
+      </form>
+
+      <form className="listing-form listing-review-form" onSubmit={handleSubmit}>
         <label>
           Title
           <input value={form.title} onChange={(event) => updateField("title", event.target.value)} />
         </label>
         <label>
           Price
-          <input type="number" min="0" value={form.price} onChange={(event) => updateField("price", event.target.value)} />
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.price}
+            onChange={(event) => updateField("price", event.target.value)}
+          />
         </label>
         <label>
           Source
@@ -126,6 +198,7 @@ export function SavedListings({
         <label>
           Condition
           <select value={form.condition} onChange={(event) => updateField("condition", event.target.value)}>
+            <option value="N/A">N/A</option>
             <option value="used">Used</option>
             <option value="new">New</option>
             <option value="open-box">Open box</option>
@@ -139,10 +212,6 @@ export function SavedListings({
         <label>
           Optional distance
           <input type="number" min="0" value={form.distance} onChange={(event) => updateField("distance", event.target.value)} />
-        </label>
-        <label className="wide-field">
-          Notes
-          <textarea value={form.notes} onChange={(event) => updateField("notes", event.target.value)} />
         </label>
         <button className="primary-button form-submit" type="submit">
           <Plus aria-hidden="true" size={18} />

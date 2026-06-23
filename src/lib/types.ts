@@ -47,7 +47,7 @@ export interface Listing {
   url: string;
   checklistItemId: string;
   category: ChecklistCategory;
-  condition: "new" | "used" | "open-box" | "refurbished";
+  condition: "new" | "used" | "open-box" | "refurbished" | "N/A";
   logistics: string;
   distance?: number;
   notes?: string;

@@ -254,6 +254,22 @@ a {
   background: var(--panel);
 }
 
+.listing-link-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 12px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.listing-review-form {
+  margin-top: 0;
+}
+
 label {
   display: grid;
   gap: 8px;
@@ -652,6 +668,7 @@ textarea {
   .landing,
   .onboarding-grid,
   .listing-form,
+  .listing-link-form,
   .category-list,
   .listing-row {
     grid-template-columns: 1fr;
