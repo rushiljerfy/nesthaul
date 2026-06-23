@@ -66,6 +66,23 @@ const savedSupabasePlan = {
   ]
 } as const;
 
+const blankProfile = {
+  location: "",
+  apartmentType: "studio",
+  moveInDate: "",
+  totalBudget: 0,
+  preference: "mix",
+  stylePreference: "",
+  ownedItems: []
+} as const;
+
+const incompleteSessionPlan = {
+  ...savedSupabasePlan,
+  profile: blankProfile,
+  checklist: savedSupabasePlan.checklist.map((item) => ({ ...item })),
+  listings: savedSupabasePlan.listings.map((listing) => ({ ...listing }))
+} as const;
+
 describe("NestHaul app workflow", () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -216,6 +233,82 @@ describe("NestHaul app workflow", () => {
     expect(window.localStorage.getItem("nesthaul-plan:rushil@example.com")).toBeNull();
   });
 
+  it("prompts a new logged-in user to complete setup before saving a remote plan", async () => {
+    mockUseAuth.mockReturnValue({
+      isConfigured: true,
+      isLoading: false,
+      logout: vi.fn(),
+      userId: "user-123",
+      userEmail: "rushil@example.com"
+    });
+    mockLoadPlanFromSupabase.mockResolvedValue(null);
+
+    render(<NestHaulApp />);
+
+    expect(await screen.findByText(/create your move-in profile/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/where are you moving to/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^dashboard$/i })).not.toBeInTheDocument();
+    expect(mockSavePlanToSupabase).not.toHaveBeenCalled();
+
+    await userEvent.type(screen.getByLabelText(/where are you moving to/i), "Brooklyn, NY");
+    await userEvent.type(screen.getByLabelText(/move-in date/i), "2026-08-01");
+    await userEvent.clear(screen.getByLabelText(/total budget/i));
+    await userEvent.type(screen.getByLabelText(/total budget/i), "1500");
+    await userEvent.type(screen.getByLabelText(/style preference/i), "warm minimal");
+    await userEvent.click(screen.getByRole("button", { name: /create my plan/i }));
+
+    expect(await screen.findByRole("button", { name: /^dashboard$/i })).toHaveAttribute("aria-current", "page");
+    await waitFor(() => {
+      expect(mockSavePlanToSupabase).toHaveBeenLastCalledWith(
+        supabaseClient,
+        "user-123",
+        expect.objectContaining({
+          activePage: "Dashboard",
+          profile: expect.objectContaining({
+            location: "Brooklyn, NY",
+            totalBudget: 1500,
+            stylePreference: "warm minimal"
+          })
+        })
+      );
+    });
+  });
+
+  it("preserves migrated session listings while a logged-in user completes setup", async () => {
+    window.sessionStorage.setItem("nesthaul-session-plan", JSON.stringify(incompleteSessionPlan));
+    mockUseAuth.mockReturnValue({
+      isConfigured: true,
+      isLoading: false,
+      logout: vi.fn(),
+      userId: "user-123",
+      userEmail: "rushil@example.com"
+    });
+    mockMigrateLocalPlanToSupabase.mockResolvedValue(incompleteSessionPlan);
+
+    render(<NestHaulApp />);
+
+    expect(await screen.findByText(/create your move-in profile/i)).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText(/where are you moving to/i), "Brooklyn, NY");
+    await userEvent.type(screen.getByLabelText(/move-in date/i), "2026-08-01");
+    await userEvent.clear(screen.getByLabelText(/total budget/i));
+    await userEvent.type(screen.getByLabelText(/total budget/i), "1500");
+    await userEvent.type(screen.getByLabelText(/style preference/i), "warm minimal");
+    await userEvent.click(screen.getByRole("button", { name: /create my plan/i }));
+
+    expect(await screen.findByText("Compact desk")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockSavePlanToSupabase).toHaveBeenLastCalledWith(
+        supabaseClient,
+        "user-123",
+        expect.objectContaining({
+          listings: [expect.objectContaining({ title: "Compact desk" })],
+          profile: expect.objectContaining({ location: "Brooklyn, NY" })
+        })
+      );
+    });
+  });
+
   it("flushes the current saved listing to Supabase before logout", async () => {
     const logout = vi.fn();
 
@@ -225,6 +318,10 @@ describe("NestHaul app workflow", () => {
       logout,
       userId: "user-123",
       userEmail: "rushil@example.com"
+    });
+    mockLoadPlanFromSupabase.mockResolvedValue({
+      ...savedSupabasePlan,
+      listings: []
     });
 
     render(<NestHaulApp />);

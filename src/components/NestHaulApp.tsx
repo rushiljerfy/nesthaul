@@ -90,13 +90,15 @@ export function NestHaulApp() {
           return;
         }
 
+        const nextProfile = loadedPlan?.profile ?? defaultProfile;
+
         if (loadedPlan) {
-          setProfile(loadedPlan.profile);
+          setProfile(nextProfile);
           setChecklist(loadedPlan.checklist);
           setListings(loadedPlan.listings);
           setHasRemotePlan(true);
         } else {
-          setProfile(defaultProfile);
+          setProfile(nextProfile);
           setChecklist(createMoveInChecklist());
           setListings([]);
           setHasRemotePlan(false);
@@ -105,7 +107,7 @@ export function NestHaulApp() {
         clearSessionPlan();
         clearSavedPlan(userEmail);
         setActivePage("Explore");
-        setStage("app");
+        setStage(isCompleteProfile(nextProfile) ? "app" : "onboarding");
         setHasLoadedSavedPlan(true);
       } catch (error) {
         if (isCancelled) {
@@ -135,6 +137,10 @@ export function NestHaulApp() {
   }, [isAuthLoading, supabaseClient, userEmail, userId]);
   useEffect(() => {
     if (!hasLoadedSavedPlan || !profile) {
+      return;
+    }
+
+    if (userId && (!isCompleteProfile(profile) || stage === "onboarding")) {
       return;
     }
 
@@ -174,7 +180,7 @@ export function NestHaulApp() {
     return () => {
       isCancelled = true;
     };
-  }, [activePage, checklist, hasLoadedSavedPlan, listings, profile, supabaseClient, userId]);
+  }, [activePage, checklist, hasLoadedSavedPlan, listings, profile, stage, supabaseClient, userId]);
 
   useEffect(() => {
     if (userId) {
@@ -280,7 +286,15 @@ export function NestHaulApp() {
   return (
     <main className="app-shell">
       {stage === "landing" ? <LandingPage onStart={() => setStage("onboarding")} /> : null}
-      {stage === "onboarding" ? <OnboardingForm onComplete={handleOnboardingComplete} /> : null}
+      {stage === "onboarding" ? (
+        <OnboardingForm
+          headingEyebrow="Move-in setup"
+          headingTitle="Create your move-in profile."
+          initialProfile={profile ?? undefined}
+          locationLabel="Where are you moving to?"
+          onComplete={handleOnboardingComplete}
+        />
+      ) : null}
       {stage === "app" && profile ? (
         <>
           <AppNav activePage={activePage} onNavigate={setActivePage} onLogout={handleLogout} userEmail={userEmail} />
@@ -337,5 +351,16 @@ function hasMeaningfulPlanChanges(plan: SavedPlan) {
     plan.profile.stylePreference !== defaultProfile.stylePreference ||
     plan.profile.ownedItems.length > 0 ||
     plan.checklist.some((item) => defaultChecklist.find((defaultItem) => defaultItem.id === item.id)?.status !== item.status)
+  );
+}
+
+function isCompleteProfile(profile: OnboardingProfile) {
+  return (
+    Boolean(profile.location.trim()) &&
+    Boolean(profile.apartmentType) &&
+    Boolean(profile.moveInDate) &&
+    profile.totalBudget > 0 &&
+    Boolean(profile.preference) &&
+    Boolean(profile.stylePreference.trim())
   );
 }
