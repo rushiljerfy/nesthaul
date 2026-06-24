@@ -5,6 +5,7 @@ import { LinkIcon, Plus, X } from "lucide-react";
 import { assessListing } from "@/lib/recommendations";
 import { formatCurrency } from "@/lib/format";
 import type { ChecklistItem, Listing } from "@/lib/types";
+import { Badge, Button, Card, EmptyState, FormField, SectionHeader, SelectInput, TextInput } from "./ui";
 
 interface SavedListingsProps {
   checklist: ChecklistItem[];
@@ -145,10 +146,11 @@ export function SavedListings({
 
   return (
     <section className="section-shell">
-      <div className="section-heading">
-        <p className="eyebrow">Saved listings</p>
-        <h2>Compare options before you buy.</h2>
-      </div>
+      <SectionHeader
+        eyebrow="Saved items"
+        title="Compare options before you buy"
+        note="Paste a listing URL, review the details, and NestHaul will label each option as buy, wait, or skip."
+      />
 
       {error ? (
         <div className="form-errors" role="alert">
@@ -161,89 +163,82 @@ export function SavedListings({
         </div>
       ) : null}
 
-      <form className="listing-link-form" onSubmit={handleReadListing}>
-        <label>
-          Listing URL
-          <input
+      <Card className="listing-workspace">
+        <form className="listing-link-form" onSubmit={handleReadListing}>
+          <FormField label="Listing URL">
+            <TextInput
             placeholder="Paste a marketplace, store, or product link"
             type="url"
             value={listingUrl}
             onChange={(event) => setListingUrl(event.target.value)}
           />
-        </label>
-        <button className="primary-button" disabled={isReadingListing} type="submit">
-          <Plus aria-hidden="true" size={18} />
-          {isReadingListing ? "Reading..." : "Read listing"}
-        </button>
-      </form>
+          </FormField>
+          <Button disabled={isReadingListing} type="submit">
+            <Plus aria-hidden="true" size={18} />
+            {isReadingListing ? "Reading..." : "Read listing"}
+          </Button>
+        </form>
 
-      <form className="listing-form listing-review-form" onSubmit={handleSubmit}>
-        <label>
-          Title
-          <input value={form.title} onChange={(event) => updateField("title", event.target.value)} />
-        </label>
-        <label>
-          Price
-          <input
+        <form className="listing-form listing-review-form" onSubmit={handleSubmit}>
+          <FormField label="Title">
+            <TextInput value={form.title} onChange={(event) => updateField("title", event.target.value)} />
+          </FormField>
+          <FormField label="Price">
+            <TextInput
             type="number"
             min="0"
             step="0.01"
             value={form.price}
             onChange={(event) => updateField("price", event.target.value)}
           />
-        </label>
-        <label>
-          Source
-          <input value={form.source} onChange={(event) => updateField("source", event.target.value)} />
-        </label>
-        <label>
-          URL
-          <input value={form.url} onChange={(event) => updateField("url", event.target.value)} />
-        </label>
-        <label>
-          Category/checklist item
-          <select value={form.checklistItemId} onChange={(event) => updateField("checklistItemId", event.target.value)}>
+          </FormField>
+          <FormField label="Source">
+            <TextInput value={form.source} onChange={(event) => updateField("source", event.target.value)} />
+          </FormField>
+          <FormField label="URL">
+            <TextInput value={form.url} onChange={(event) => updateField("url", event.target.value)} />
+          </FormField>
+          <FormField label="Category/checklist item">
+            <SelectInput value={form.checklistItemId} onChange={(event) => updateField("checklistItemId", event.target.value)}>
             <option value="">Choose item</option>
             {checklist.map((item) => (
               <option key={item.id} value={item.id}>
                 {item.category}: {item.name}
               </option>
             ))}
-          </select>
-        </label>
-        <label>
-          Condition
-          <select value={form.condition} onChange={(event) => updateField("condition", event.target.value)}>
+            </SelectInput>
+          </FormField>
+          <FormField label="Condition">
+            <SelectInput value={form.condition} onChange={(event) => updateField("condition", event.target.value)}>
             <option value="unknown">Unknown</option>
             <option value="N/A">N/A</option>
             <option value="used">Used</option>
             <option value="new">New</option>
             <option value="open-box">Open box</option>
             <option value="refurbished">Refurbished</option>
-          </select>
-        </label>
-        <label>
-          Delivery or pickup info
-          <input value={form.logistics} onChange={(event) => updateField("logistics", event.target.value)} />
-        </label>
-        <label>
-          Optional distance
-          <input type="number" min="0" value={form.distance} onChange={(event) => updateField("distance", event.target.value)} />
-        </label>
-        <button className="primary-button form-submit" type="submit">
-          <Plus aria-hidden="true" size={18} />
-          Save listing
-        </button>
-      </form>
+            </SelectInput>
+          </FormField>
+          <FormField label="Delivery or pickup info">
+            <TextInput value={form.logistics} onChange={(event) => updateField("logistics", event.target.value)} />
+          </FormField>
+          <FormField label="Optional distance">
+            <TextInput type="number" min="0" value={form.distance} onChange={(event) => updateField("distance", event.target.value)} />
+          </FormField>
+          <Button className="form-submit" type="submit">
+            <Plus aria-hidden="true" size={18} />
+            Save listing
+          </Button>
+        </form>
+      </Card>
 
       <div className="listing-list">
         {listings.length === 0 ? (
-          <p className="empty-state">No listings saved yet.</p>
+          <EmptyState>No listings saved yet. Save a starter item or paste a listing you are considering.</EmptyState>
         ) : (
           listings.map((listing) => {
             const assessment = assessListing(listing, checklist, totalBudget, plannedSpend);
             return (
-              <article className="listing-row" key={listing.id}>
+              <article className="listing-row card" key={listing.id}>
                 <div>
                   <div className="listing-title-row">
                     <h3>{listing.title}</h3>
@@ -259,7 +254,7 @@ export function SavedListings({
                   <p>
                     {listing.source} · {formatCondition(listing.condition)} · {listing.logistics || "Unknown logistics"}
                   </p>
-                  {listing.savedFrom === "explore" ? <p className="saved-source">Saved from Explore</p> : null}
+                  {listing.savedFrom === "explore" ? <Badge tone="orange">Saved from Explore</Badge> : null}
                   {listing.notes ? <p>{listing.notes}</p> : null}
                   <a href={listing.url} target="_blank" rel="noreferrer">
                     <LinkIcon aria-hidden="true" size={14} />
@@ -267,7 +262,7 @@ export function SavedListings({
                   </a>
                 </div>
                 <div className={`recommendation recommendation-${assessment.recommendation.toLowerCase()}`}>
-                  <strong>{assessment.recommendation}</strong>
+                  <Badge tone={recommendationTone(assessment.recommendation)}>{assessment.recommendation}</Badge>
                   <span>{formatCurrency(listing.price)}</span>
                   <p>{assessment.explanation}</p>
                 </div>
@@ -278,6 +273,18 @@ export function SavedListings({
       </div>
     </section>
   );
+}
+
+function recommendationTone(recommendation: ReturnType<typeof assessListing>["recommendation"]) {
+  if (recommendation === "Buy") {
+    return "green";
+  }
+
+  if (recommendation === "Wait") {
+    return "yellow";
+  }
+
+  return "red";
 }
 
 function formatCondition(condition: Listing["condition"]) {

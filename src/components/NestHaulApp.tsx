@@ -71,7 +71,7 @@ export function NestHaulApp() {
         setChecklist(sessionPlan?.checklist ?? createMoveInChecklist());
         setListings(sessionPlan?.listings ?? []);
         setActivePage(sessionPlan?.activePage ?? "Explore");
-        setStage("app");
+        setStage("landing");
         setHasRemotePlan(null);
         setHasLoadedSavedPlan(true);
         return;
@@ -106,7 +106,7 @@ export function NestHaulApp() {
 
         clearSessionPlan();
         clearSavedPlan(userEmail);
-        setActivePage("Explore");
+        setActivePage(isCompleteProfile(nextProfile) ? "Dashboard" : "Explore");
         setStage(isCompleteProfile(nextProfile) ? "app" : "onboarding");
         setHasLoadedSavedPlan(true);
       } catch (error) {
@@ -285,7 +285,15 @@ export function NestHaulApp() {
 
   return (
     <main className="app-shell">
-      {stage === "landing" ? <LandingPage onStart={() => setStage("onboarding")} /> : null}
+      {stage === "landing" ? (
+        <LandingPage
+          onExplore={() => {
+            setActivePage("Explore");
+            setStage("app");
+          }}
+          onStart={() => setStage("onboarding")}
+        />
+      ) : null}
       {stage === "onboarding" ? (
         <OnboardingForm
           headingEyebrow="Move-in setup"
@@ -357,10 +365,7 @@ function hasMeaningfulPlanChanges(plan: SavedPlan) {
 function isCompleteProfile(profile: OnboardingProfile) {
   return (
     Boolean(profile.location.trim()) &&
-    Boolean(profile.apartmentType) &&
-    Boolean(profile.moveInDate) &&
     profile.totalBudget > 0 &&
-    Boolean(profile.preference) &&
-    Boolean(profile.stylePreference.trim())
+    Boolean(profile.preference)
   );
 }

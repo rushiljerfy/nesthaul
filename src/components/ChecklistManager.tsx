@@ -2,6 +2,7 @@
 
 import { formatCurrency } from "@/lib/format";
 import type { ChecklistCategory, ChecklistItem, ChecklistStatus } from "@/lib/types";
+import { Badge, Card, SectionHeader } from "./ui";
 
 interface ChecklistManagerProps {
   checklist: ChecklistItem[];
@@ -15,10 +16,11 @@ export function ChecklistManager({ checklist, onUpdateStatus }: ChecklistManager
 
   return (
     <section className="section-shell">
-      <div className="section-heading">
-        <p className="eyebrow">Checklist</p>
-        <h2>Apartment essentials by category</h2>
-      </div>
+      <SectionHeader
+        eyebrow="Your checklist"
+        title="Apartment essentials by category"
+        note="Mark each item as missing, saved, bought, or skipped as your plan changes."
+      />
 
       <div className="category-list">
         {categories.map((category) => (
@@ -44,7 +46,7 @@ function CategoryGroup({
   onUpdateStatus: (itemId: string, status: ChecklistStatus) => void;
 }) {
   return (
-    <div className="category-group">
+    <Card className="category-group">
       <h3>{category}</h3>
       <div className="checklist-items">
         {items.map((item) => (
@@ -52,7 +54,8 @@ function CategoryGroup({
             <div>
               <strong>{item.name}</strong>
               <span>
-                {item.priority} · {formatCurrency(item.suggestedBudget)}
+                <Badge tone={item.priority === "urgent" ? "orange" : "neutral"}>{item.priority}</Badge>
+                {formatCurrency(item.suggestedBudget)} target
               </span>
             </div>
             <select value={item.status} onChange={(event) => onUpdateStatus(item.id, event.target.value as ChecklistStatus)}>
@@ -65,6 +68,6 @@ function CategoryGroup({
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }

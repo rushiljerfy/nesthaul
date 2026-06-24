@@ -1,6 +1,5 @@
 "use client";
 
-import { Compass, LayoutDashboard, UserRound } from "lucide-react";
 import type { AppPage } from "@/lib/types";
 
 interface AppNavProps {
@@ -10,29 +9,23 @@ interface AppNavProps {
   userEmail?: string | null;
 }
 
-const navItems: { page: AppPage; icon: React.ReactNode }[] = [
-  { page: "Dashboard", icon: <LayoutDashboard aria-hidden="true" size={18} /> },
-  { page: "Explore", icon: <Compass aria-hidden="true" size={18} /> },
-  { page: "Profile", icon: <UserRound aria-hidden="true" size={18} /> }
-];
+const navItems: AppPage[] = ["Explore", "Dashboard", "Profile"];
 
 export function AppNav({ activePage, onNavigate, onLogout, userEmail }: AppNavProps) {
   return (
     <header className="app-header">
-      <div>
-        <p className="eyebrow">NestHaul</p>
-        <strong>Move-in planner</strong>
-      </div>
+      <button className="wordmark wordmark-button" type="button" onClick={() => onNavigate("Dashboard")}>
+        NestHaul
+      </button>
       <nav className="app-nav" aria-label="Main navigation">
-        {navItems.map((item) => (
+        {navItems.map((page) => (
           <button
-            aria-current={activePage === item.page ? "page" : undefined}
-            key={item.page}
+            aria-current={activePage === page ? "page" : undefined}
+            key={page}
             type="button"
-            onClick={() => onNavigate(item.page)}
+            onClick={() => onNavigate(page)}
           >
-            {item.icon}
-            {item.page}
+            {page}
           </button>
         ))}
       </nav>

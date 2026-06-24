@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { OnboardingProfile } from "@/lib/types";
 import { AuthCta } from "./AuthCta";
 import { OnboardingForm } from "./OnboardingForm";
+import { SectionHeader, StatCard } from "./ui";
 
 interface ProfilePageProps {
   profile: OnboardingProfile;
@@ -15,27 +16,24 @@ export function ProfilePage({ profile, onSaveProfile, showAuthCta = false }: Pro
   const [saved, setSaved] = useState(false);
 
   return (
-    <section>
+    <section className="profile-page">
       {showAuthCta ? <AuthCta /> : null}
+      <SectionHeader
+        eyebrow="Profile"
+        title="Set up your move-in details"
+        note="Keep your budget, location, and preferences current so the plan stays useful."
+      />
       <div className="profile-summary">
-        <div>
-          <span>Location</span>
-          <strong>{profile.location}</strong>
-        </div>
-        <div>
-          <span>Total budget</span>
-          <strong>
-            {new Intl.NumberFormat("en-US", {
-              style: "currency",
-              currency: "USD",
-              maximumFractionDigits: 0
-            }).format(profile.totalBudget)}
-          </strong>
-        </div>
-        <div>
-          <span>Style</span>
-          <strong>{profile.stylePreference}</strong>
-        </div>
+        <StatCard label="Where are you moving to?" value={profile.location || "Not set"} />
+        <StatCard
+          label="Total budget"
+          value={new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
+            maximumFractionDigits: 0
+          }).format(profile.totalBudget)}
+        />
+        <StatCard label="Preference" value={profile.preference.replace("-", " ")} />
       </div>
       {saved ? (
         <div className="success-message" role="status">
@@ -43,8 +41,8 @@ export function ProfilePage({ profile, onSaveProfile, showAuthCta = false }: Pro
         </div>
       ) : null}
       <OnboardingForm
-        headingEyebrow="Profile"
-        headingTitle="Edit your move-in answers."
+        headingEyebrow="Setup"
+        headingTitle="Edit your move-in answers"
         initialProfile={profile}
         locationLabel="Where are you moving to?"
         submitLabel="Save profile"

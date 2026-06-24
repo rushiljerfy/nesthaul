@@ -31,6 +31,7 @@ export function DashboardPage({
     <>
       {showAuthCta ? <AuthCta /> : null}
       <Dashboard profile={profile} checklist={checklist} listings={listings} />
+      <ChecklistManager checklist={checklist} onUpdateStatus={onUpdateStatus} />
       <SavedListings
         checklist={checklist}
         listings={listings}
@@ -39,7 +40,6 @@ export function DashboardPage({
         onAddListing={onAddListing}
         onRemoveListing={onRemoveListing}
       />
-      <ChecklistManager checklist={checklist} onUpdateStatus={onUpdateStatus} />
     </>
   );
 }

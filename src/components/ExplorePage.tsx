@@ -1,9 +1,10 @@
 "use client";
 
-import { BookmarkPlus, Check } from "lucide-react";
+import { Bath, BedDouble, BookmarkPlus, BriefcaseBusiness, Check, CookingPot, LampFloor, Package, Sparkles } from "lucide-react";
 import { exploreItems } from "@/lib/explore";
 import { formatCurrency } from "@/lib/format";
 import type { ChecklistCategory, ExploreItem, Listing } from "@/lib/types";
+import { Badge, SectionHeader } from "./ui";
 
 interface ExplorePageProps {
   savedListings: Listing[];
@@ -15,13 +16,11 @@ export function ExplorePage({ savedListings, onSaveItem }: ExplorePageProps) {
 
   return (
     <section className="section-shell">
-      <div className="section-heading">
-        <div>
-          <p className="eyebrow">Explore</p>
-          <h2>Explore starter picks</h2>
-        </div>
-        <p className="section-note">Static, budget-aware ideas mapped to your checklist categories.</p>
-      </div>
+      <SectionHeader
+        eyebrow="Explore"
+        title="Explore starter items"
+        note="Save items you are considering and NestHaul will help you track your plan."
+      />
 
       <div className="explore-stack">
         {categories.map((category) => (
@@ -51,7 +50,10 @@ function ExploreCarousel({
 }) {
   return (
     <section className="explore-category" aria-labelledby={`explore-${category}`}>
-      <h3 id={`explore-${category}`}>{category}</h3>
+      <div className="explore-category-heading">
+        <span className="category-icon">{categoryIcon(category)}</span>
+        <h3 id={`explore-${category}`}>{category}</h3>
+      </div>
       <div className="explore-carousel">
         {items.map((item) => {
           const isSaved = savedListings.some((listing) => listing.id === item.id);
@@ -59,11 +61,19 @@ function ExploreCarousel({
           return (
             <article className="explore-card" data-testid="explore-item" key={item.id}>
               <div>
-                <span>{item.condition}</span>
+                <div className="item-visual" aria-hidden="true">
+                  {categoryIcon(item.category)}
+                </div>
+                <div className="item-meta">
+                  <Badge tone="neutral">{item.category}</Badge>
+                  <span>{item.source}</span>
+                </div>
                 <h4>{item.title}</h4>
                 <strong>{formatCurrency(item.price)}</strong>
                 <p>{item.notes}</p>
-                <small>{item.logistics}</small>
+                <small>
+                  {formatCondition(item.condition)} · {item.logistics}
+                </small>
               </div>
               <button disabled={isSaved} type="button" onClick={() => onSaveItem(item)}>
                 {isSaved ? <Check aria-hidden="true" size={16} /> : <BookmarkPlus aria-hidden="true" size={16} />}
@@ -75,4 +85,38 @@ function ExploreCarousel({
       </div>
     </section>
   );
+}
+
+function categoryIcon(category: ChecklistCategory) {
+  const props = { size: 20, strokeWidth: 1.8 };
+
+  switch (category) {
+    case "Sleep":
+      return <BedDouble aria-hidden="true" {...props} />;
+    case "Work":
+      return <BriefcaseBusiness aria-hidden="true" {...props} />;
+    case "Kitchen":
+      return <CookingPot aria-hidden="true" {...props} />;
+    case "Bathroom":
+      return <Bath aria-hidden="true" {...props} />;
+    case "Cleaning":
+      return <Sparkles aria-hidden="true" {...props} />;
+    case "Storage":
+      return <Package aria-hidden="true" {...props} />;
+    case "Living":
+      return <LampFloor aria-hidden="true" {...props} />;
+  }
+}
+
+function formatCondition(condition: Listing["condition"]) {
+  const labels: Record<Listing["condition"], string> = {
+    new: "New",
+    used: "Used",
+    "open-box": "Open box",
+    refurbished: "Refurbished",
+    unknown: "Unknown condition",
+    "N/A": "N/A"
+  };
+
+  return labels[condition];
 }

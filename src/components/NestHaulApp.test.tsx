@@ -83,6 +83,19 @@ const incompleteSessionPlan = {
   listings: savedSupabasePlan.listings.map((listing) => ({ ...listing }))
 } as const;
 
+async function openExploreFromLanding() {
+  await userEvent.click(screen.getByRole("button", { name: /explore starter items/i }));
+}
+
+async function completeRequiredOnboarding(location = "Brooklyn, NY", budget = "1500") {
+  await userEvent.type(screen.getByLabelText(/where are you moving to/i), location);
+  await userEvent.type(screen.getByLabelText(/total budget/i), budget);
+  await userEvent.selectOptions(screen.getByLabelText(/new\/used preference/i), "mix");
+  await userEvent.click(screen.getByRole("button", { name: /next/i }));
+  await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+  await userEvent.click(screen.getByRole("button", { name: /create my plan/i }));
+}
+
 describe("NestHaul app workflow", () => {
   beforeEach(() => {
     window.localStorage.clear();
@@ -101,19 +114,32 @@ describe("NestHaul app workflow", () => {
     });
   });
 
-  it("opens directly to Explore with the three page app shell", async () => {
+  it("opens logged-out users to a polished landing entry", async () => {
     render(<NestHaulApp />);
 
+    expect(screen.getByRole("heading", { name: /furnish your apartment without blowing your budget/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /build your move-in plan/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /explore starter items/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /log in/i })).toHaveAttribute("href", "/login");
+    expect(screen.getByRole("link", { name: /sign up/i })).toHaveAttribute("href", "/signup");
+  });
+
+  it("opens Explore from the landing page with the three page app shell", async () => {
+    render(<NestHaulApp />);
+
+    await openExploreFromLanding();
+
     expect(screen.getByRole("button", { name: /^explore$/i })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByText(/explore starter picks/i)).toBeInTheDocument();
+    expect(screen.getByText(/explore starter items/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^dashboard$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^explore$/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /^profile$/i })).toBeInTheDocument();
   });
 
-  it("keeps Dashboard and Profile available from the default Explore start", async () => {
+  it("keeps Dashboard and Profile available after entering from Explore", async () => {
     render(<NestHaulApp />);
 
+    await openExploreFromLanding();
     await userEvent.click(screen.getByRole("button", { name: /^dashboard$/i }));
 
     expect(screen.getByText(/apartment essentials by category/i)).toBeInTheDocument();
@@ -131,12 +157,16 @@ describe("NestHaul app workflow", () => {
   it("lets logged-out users edit setup answers without restoring them next session", async () => {
     const { unmount } = render(<NestHaulApp />);
 
+    await openExploreFromLanding();
     await userEvent.click(screen.getByRole("button", { name: /^profile$/i }));
     await userEvent.clear(screen.getByLabelText(/where are you moving to/i));
     await userEvent.type(screen.getByLabelText(/where are you moving to/i), "Queens, NY");
-    await userEvent.type(screen.getByLabelText(/move-in date/i), "2026-08-01");
     await userEvent.clear(screen.getByLabelText(/total budget/i));
     await userEvent.type(screen.getByLabelText(/total budget/i), "1800");
+    await userEvent.selectOptions(screen.getByLabelText(/new\/used preference/i), "mix");
+    await userEvent.click(screen.getByRole("button", { name: /next/i }));
+    await userEvent.click(screen.getByRole("button", { name: /continue/i }));
+    await userEvent.type(screen.getByLabelText(/move-in date/i), "2026-08-01");
     await userEvent.type(screen.getByLabelText(/style preference/i), "warm minimal");
     await userEvent.click(screen.getByRole("button", { name: /save profile/i }));
 
@@ -145,6 +175,7 @@ describe("NestHaul app workflow", () => {
     unmount();
     render(<NestHaulApp />);
 
+    await openExploreFromLanding();
     await userEvent.click(screen.getByRole("button", { name: /^profile$/i }));
 
     expect(screen.getByLabelText(/where are you moving to/i)).toHaveValue("Queens, NY");
@@ -156,6 +187,7 @@ describe("NestHaul app workflow", () => {
   it("saves Explore items to the Dashboard saved listings", async () => {
     render(<NestHaulApp />);
 
+    await openExploreFromLanding();
     const firstExploreItem = screen.getAllByTestId("explore-item")[0];
     const title = within(firstExploreItem).getByRole("heading").textContent;
     await userEvent.click(within(firstExploreItem).getByRole("button", { name: /save to list/i }));
@@ -171,6 +203,7 @@ describe("NestHaul app workflow", () => {
   it("removes saved Dashboard items from UI, Explore saved state, and localStorage", async () => {
     render(<NestHaulApp />);
 
+    await openExploreFromLanding();
     const firstExploreItem = screen.getAllByTestId("explore-item")[0];
     const title = within(firstExploreItem).getByRole("heading").textContent ?? "";
     await userEvent.click(within(firstExploreItem).getByRole("button", { name: /save to list/i }));
@@ -193,6 +226,7 @@ describe("NestHaul app workflow", () => {
   it("renders scrollable Explore carousels with at least seven items per category", async () => {
     render(<NestHaulApp />);
 
+    await openExploreFromLanding();
     for (const category of ["Sleep", "Work", "Kitchen", "Bathroom", "Cleaning", "Storage", "Living"]) {
       const group = screen.getByRole("region", { name: category });
 
@@ -216,8 +250,7 @@ describe("NestHaul app workflow", () => {
       expect(mockLoadPlanFromSupabase).toHaveBeenCalledWith(supabaseClient, "user-123");
     });
 
-    expect(screen.getByRole("button", { name: /^explore$/i })).toHaveAttribute("aria-current", "page");
-    await userEvent.click(screen.getByRole("button", { name: /^dashboard$/i }));
+    expect(screen.getByRole("button", { name: /^dashboard$/i })).toHaveAttribute("aria-current", "page");
     expect(screen.getByText("Compact desk")).toBeInTheDocument();
     expect(screen.getByText("Planned spend").parentElement).toHaveTextContent("$95");
 
@@ -250,12 +283,7 @@ describe("NestHaul app workflow", () => {
     expect(screen.queryByRole("button", { name: /^dashboard$/i })).not.toBeInTheDocument();
     expect(mockSavePlanToSupabase).not.toHaveBeenCalled();
 
-    await userEvent.type(screen.getByLabelText(/where are you moving to/i), "Brooklyn, NY");
-    await userEvent.type(screen.getByLabelText(/move-in date/i), "2026-08-01");
-    await userEvent.clear(screen.getByLabelText(/total budget/i));
-    await userEvent.type(screen.getByLabelText(/total budget/i), "1500");
-    await userEvent.type(screen.getByLabelText(/style preference/i), "warm minimal");
-    await userEvent.click(screen.getByRole("button", { name: /create my plan/i }));
+    await completeRequiredOnboarding("Brooklyn, NY", "1500");
 
     expect(await screen.findByRole("button", { name: /^dashboard$/i })).toHaveAttribute("aria-current", "page");
     await waitFor(() => {
@@ -266,8 +294,7 @@ describe("NestHaul app workflow", () => {
           activePage: "Dashboard",
           profile: expect.objectContaining({
             location: "Brooklyn, NY",
-            totalBudget: 1500,
-            stylePreference: "warm minimal"
+            totalBudget: 1500
           })
         })
       );
@@ -289,12 +316,7 @@ describe("NestHaul app workflow", () => {
 
     expect(await screen.findByText(/create your move-in profile/i)).toBeInTheDocument();
 
-    await userEvent.type(screen.getByLabelText(/where are you moving to/i), "Brooklyn, NY");
-    await userEvent.type(screen.getByLabelText(/move-in date/i), "2026-08-01");
-    await userEvent.clear(screen.getByLabelText(/total budget/i));
-    await userEvent.type(screen.getByLabelText(/total budget/i), "1500");
-    await userEvent.type(screen.getByLabelText(/style preference/i), "warm minimal");
-    await userEvent.click(screen.getByRole("button", { name: /create my plan/i }));
+    await completeRequiredOnboarding("Brooklyn, NY", "1500");
 
     expect(await screen.findByText("Compact desk")).toBeInTheDocument();
     await waitFor(() => {
@@ -330,6 +352,7 @@ describe("NestHaul app workflow", () => {
       expect(mockLoadPlanFromSupabase).toHaveBeenCalledWith(supabaseClient, "user-123");
     });
 
+    await userEvent.click(screen.getByRole("button", { name: /^explore$/i }));
     const firstExploreItem = screen.getAllByTestId("explore-item")[0];
     const title = within(firstExploreItem).getByRole("heading").textContent ?? "";
 
